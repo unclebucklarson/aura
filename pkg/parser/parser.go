@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/aura-lang/aura-toolchain/pkg/ast"
-	"github.com/aura-lang/aura-toolchain/pkg/token"
+	"github.com/unclebucklarson/aura/pkg/ast"
+	"github.com/unclebucklarson/aura/pkg/token"
 )
 
 // Parser transforms a token stream into an AST.

@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/aura-lang/aura-toolchain/pkg/lexer"
-	"github.com/aura-lang/aura-toolchain/pkg/parser"
+	"github.com/unclebucklarson/aura/pkg/lexer"
+	"github.com/unclebucklarson/aura/pkg/parser"
 )
 
 func formatSource(t *testing.T, src string) string {

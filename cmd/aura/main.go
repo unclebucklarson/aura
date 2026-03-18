@@ -11,10 +11,10 @@ import (
 	"os"
 	"strings"
 
-	"github.com/aura-lang/aura-toolchain/pkg/ast"
-	"github.com/aura-lang/aura-toolchain/pkg/formatter"
-	"github.com/aura-lang/aura-toolchain/pkg/lexer"
-	"github.com/aura-lang/aura-toolchain/pkg/parser"
+	"github.com/unclebucklarson/aura/pkg/ast"
+	"github.com/unclebucklarson/aura/pkg/formatter"
+	"github.com/unclebucklarson/aura/pkg/lexer"
+	"github.com/unclebucklarson/aura/pkg/parser"
 )
 
 func main() {

@@ -1,7 +1,7 @@
 // Package ast defines all AST node types for the Aura language.
 package ast
 
-import "github.com/aura-lang/aura-toolchain/pkg/token"
+import "github.com/unclebucklarson/aura/pkg/token"
 
 // Node is the interface implemented by all AST nodes.
 type Node interface {

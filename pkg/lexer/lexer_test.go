@@ -3,7 +3,7 @@ package lexer
 import (
         "testing"
 
-        "github.com/aura-lang/aura-toolchain/pkg/token"
+        "github.com/unclebucklarson/aura/pkg/token"
 )
 
 func TestSimpleTokens(t *testing.T) {

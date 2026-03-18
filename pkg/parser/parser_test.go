@@ -3,8 +3,8 @@ package parser
 import (
 	"testing"
 
-	"github.com/aura-lang/aura-toolchain/pkg/ast"
-	"github.com/aura-lang/aura-toolchain/pkg/lexer"
+	"github.com/unclebucklarson/aura/pkg/ast"
+	"github.com/unclebucklarson/aura/pkg/lexer"
 )
 
 func parseSource(t *testing.T, src string) *ast.Module {

@@ -8,7 +8,7 @@ import (
         "unicode"
         "unicode/utf8"
 
-        "github.com/aura-lang/aura-toolchain/pkg/token"
+        "github.com/unclebucklarson/aura/pkg/token"
 )
 
 // Lexer tokenizes Aura source code.

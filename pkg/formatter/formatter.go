@@ -6,8 +6,8 @@ import (
         "fmt"
         "strings"
 
-        "github.com/aura-lang/aura-toolchain/pkg/ast"
-        "github.com/aura-lang/aura-toolchain/pkg/token"
+        "github.com/unclebucklarson/aura/pkg/ast"
+        "github.com/unclebucklarson/aura/pkg/token"
 )
 
 // Formatter converts AST nodes to canonical Aura source.
