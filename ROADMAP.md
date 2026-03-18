@@ -31,7 +31,7 @@ These principles guide every phase of development. When evaluating features, tra
 |-------|------|--------|------------------|
 | 1 | Syntax (Lexer, Parser, Formatter) | ✅ COMPLETE | — |
 | 2 | Semantic Analysis | ✅ COMPLETE | — |
-| 3 | Code Generation (Interpreter) | 🚧 **UP NEXT** | 4–6 weeks |
+| 3 | Code Generation (Interpreter) | ✅ COMPLETE | — |
 | 4 | Runtime & Standard Library | 🔲 Not Started | 8–12 weeks |
 | 5 | Advanced Tooling & Ecosystem | 🔲 Not Started | Ongoing |
 
@@ -153,46 +153,46 @@ The tree-walk interpreter is the **highest-impact next step** for the AI-first m
 **Complexity:** Medium-High | **Estimate:** 4–6 weeks
 
 #### 3.1.1 Value System
-- [ ] Implement Aura value types (AuraInt, AuraFloat, AuraString, AuraBool, AuraNone)
-- [ ] Implement composite values (AuraList, AuraMap, AuraSet, AuraTuple)
-- [ ] Implement AuraStruct with field access and construction
-- [ ] Implement AuraEnum with variant matching
-- [ ] Implement AuraOption (Some/None) and AuraResult (Ok/Err)
-- [ ] Implement AuraFunction (closures with captured environment)
+- [x] Implement Aura value types (AuraInt, AuraFloat, AuraString, AuraBool, AuraNone)
+- [x] Implement composite values (AuraList, AuraMap, AuraSet, AuraTuple)
+- [x] Implement AuraStruct with field access and construction
+- [x] Implement AuraEnum with variant matching
+- [x] Implement AuraOption (Some/None) and AuraResult (Ok/Err)
+- [x] Implement AuraFunction (closures with captured environment)
 
 #### 3.1.2 Expression Evaluation
-- [ ] Evaluate literals (int, float, string, bool, none)
-- [ ] Evaluate binary and unary operations with type-appropriate semantics
-- [ ] Evaluate function calls with argument binding and default values
-- [ ] Evaluate field access and index operations
-- [ ] Evaluate string interpolation at runtime
-- [ ] Evaluate list comprehensions and lambda expressions
-- [ ] Evaluate `?` propagation for Option/Result types
-- [ ] Evaluate pipeline operator (`|>`)
+- [x] Evaluate literals (int, float, string, bool, none)
+- [x] Evaluate binary and unary operations with type-appropriate semantics
+- [x] Evaluate function calls with argument binding and default values
+- [x] Evaluate field access and index operations
+- [x] Evaluate string interpolation at runtime
+- [x] Evaluate list comprehensions and lambda expressions
+- [x] Evaluate `?` propagation for Option/Result types
+- [x] Evaluate pipeline operator (`|>`)
 
 #### 3.1.3 Statement Execution
-- [ ] Execute `let` bindings (immutable and mutable)
-- [ ] Execute assignments (with mutability checking)
-- [ ] Execute `return`, `break`, `continue` (as control flow signals)
-- [ ] Execute `if`/`elif`/`else` chains
-- [ ] Execute `match` with pattern matching evaluation
-- [ ] Execute `for ... in` loops with iterator protocol
-- [ ] Execute `while` loops
+- [x] Execute `let` bindings (immutable and mutable)
+- [x] Execute assignments (with mutability checking)
+- [x] Execute `return`, `break`, `continue` (as control flow signals)
+- [x] Execute `if`/`elif`/`else` chains
+- [x] Execute `match` with pattern matching evaluation
+- [x] Execute `for ... in` loops with iterator protocol
+- [x] Execute `while` loops
 
 #### 3.1.4 Effect & Runtime Infrastructure
-- [ ] Environment/scope management for interpreter state
-- [ ] Effect capability injection via `with` blocks
-- [ ] Built-in print/assert functions
-- [ ] Structured runtime error output (JSON for AI agents)
-- [ ] Test block runner (`aura test <file>`)
+- [x] Environment/scope management for interpreter state
+- [x] Effect capability injection via `with` blocks
+- [x] Built-in print/assert functions
+- [x] Structured runtime error output (JSON for AI agents)
+- [x] Test block runner (`aura test <file>`)
 
-**Package:** `pkg/interpreter`
+**Package:** `pkg/interpreter` — 91 tests ✅
 
 #### 3.1.5 CLI Integration
-- [ ] `aura run <file>` — execute an Aura program
-- [ ] `aura test <file>` — run test blocks with pass/fail reporting
-- [ ] `--json` flag for structured output (AI agent consumption)
-- [ ] `--dry-run` flag for validation without execution
+- [x] `aura run <file>` — execute an Aura program
+- [x] `aura test <file>` — run test blocks with pass/fail reporting
+- [x] `--json` flag for structured output (AI agent consumption)
+- [x] `--dry-run` flag for validation without execution
 
 ### 3.2 Bytecode Compiler (Future — Phase 5+)
 
