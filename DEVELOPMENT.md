@@ -98,7 +98,13 @@ aura-toolchain/
 │   │   ├── checker.go           # Multi-pass type checker
 │   │   ├── errors.go            # AI-parseable structured errors
 │   │   └── checker_test.go      # 48 tests
-│   └── interpreter/             # [Phase 3] Tree-walk interpreter
+│   └── interpreter/             # [Phase 3] Tree-walk interpreter ✅
+│       └── value.go             # Value system (Int, Float, String, Bool, etc.)
+│       └── env.go               # Environment with scope chain
+│       └── eval.go              # Expression/statement evaluator
+│       └── interpreter.go       # Module execution & builtins
+│       └── test.go              # Test runner
+│       └── interpreter_test.go  # 91 tests
 ├── testdata/                    # Sample .aura files
 ├── user_docs/                   # User-facing documentation
 ├── ROADMAP.md                   # Development roadmap
@@ -144,6 +150,7 @@ go test ./pkg/formatter -v
 go test ./pkg/symbols -v
 go test ./pkg/types -v
 go test ./pkg/checker -v
+go test ./pkg/interpreter -v
 
 # Run with race detection
 go test ./... -race
@@ -170,6 +177,15 @@ go tool cover -html=coverage.out
 
 # Type-check with AI-parseable JSON output
 ./aura check --json testdata/service.aura
+
+# Run an Aura program (executes main() function)
+./aura run program.aura
+
+# Run test blocks in a file
+./aura test testdata/models.aura
+
+# Start interactive REPL
+./aura repl
 ```
 
 ---
@@ -255,44 +271,57 @@ go tool cover -html=coverage.out
 [ ] ? propagation operator type checking
 ```
 
-### Phase 3: Code Generation
+### Phase 3: Tree-Walk Interpreter ✅ COMPLETE
 
-#### 3.1 Tree-Walk Interpreter (`pkg/interpreter`)
+#### 3.1 Tree-Walk Interpreter (`pkg/interpreter`) — 91 tests
 
 ```
-[ ] Define Value types (IntVal, FloatVal, StringVal, BoolVal, NoneVal, etc.)
-[ ] Define Environment (variable bindings per scope)
-[ ] Implement expression evaluation:
-    [ ] Literals
-    [ ] Identifiers (lookup in environment)
-    [ ] Binary and unary operators
-    [ ] Function calls
-    [ ] Field access
-    [ ] Index access
-    [ ] Struct construction
-    [ ] List literals and list comprehensions
-    [ ] Map literals
-    [ ] String interpolation
-    [ ] Lambda expressions
-    [ ] If expressions
-    [ ] Pipeline operator
-    [ ] Option chaining (?)
-[ ] Implement statement execution:
-    [ ] Let bindings
-    [ ] Assignment
-    [ ] Return
-    [ ] If/elif/else
-    [ ] Match/case
-    [ ] For loops
-    [ ] While loops
-    [ ] Break/continue
-    [ ] Assert
-    [ ] Expression statements
-[ ] Implement function definition and calling convention
-[ ] Implement effect capability injection
-[ ] Implement test block runner
-[ ] Add REPL support (read-eval-print loop)
-[ ] Write tests for each evaluation form
+[x] Value system: IntVal, FloatVal, StringVal, BoolVal, NoneVal, ListVal, MapVal,
+    SetVal, TupleVal, StructVal, EnumVal, FunctionVal, LambdaVal, BuiltinFnVal,
+    OptionVal (Some/None), ResultVal (Ok/Err)
+[x] Environment with scope chain (parent lookup, const/mutable tracking)
+[x] Expression evaluation:
+    [x] Literals (int, float, string, bool, none)
+    [x] Identifiers (variable lookup)
+    [x] Binary operators (+, -, *, /, %, **, ==, !=, <, >, <=, >=, and, or)
+    [x] Unary operators (-, not)
+    [x] Function calls (user-defined, builtins, lambdas)
+    [x] Field access (structs, enums)
+    [x] Index access (lists, maps, negative indexing)
+    [x] Struct construction
+    [x] List literals and list comprehensions (with filter)
+    [x] Map literals
+    [x] Lambda expressions (|params| -> expr)
+    [x] If expressions (if/then/else)
+    [x] String concatenation
+[x] Statement execution:
+    [x] Let bindings (mutable/immutable)
+    [x] Assignment
+    [x] Return
+    [x] If/elif/else
+    [x] Match/case (literals, bindings, wildcards)
+    [x] For loops (with range)
+    [x] While loops
+    [x] Break/continue
+    [x] Assert
+    [x] Expression statements
+    [x] With blocks (effect capabilities)
+[x] Function definition and calling convention
+[x] Closure support (capturing enclosing environment)
+[x] Builtins: print, len, str, int, float, range, type_of, abs, min, max,
+    Ok, Err, Some, None
+[x] Test block runner (RunTests, FormatTestResults)
+[x] CLI integration: run, test, repl commands
+[x] 91 comprehensive tests
+```
+
+#### Deferred to future phases
+```
+[ ] Pipeline operator evaluation
+[ ] Option chaining (?) propagation
+[ ] String interpolation
+[ ] Effect capability enforcement at runtime
+[ ] Import/module resolution
 ```
 
 ---
@@ -354,7 +383,7 @@ Each package should have a **single, clear responsibility**:
 - `symbols` — Symbol table with hierarchical scope management. Used by the checker.
 - `types` — Type system representation, equality, subtyping, and registry. Used by the checker.
 - `checker` — Multi-pass type checker integrating symbols, types, and effect tracking. Depends on parser output.
-- `interpreter` — [Phase 3] Typed AST → execution. Depends on all analysis phases.
+- `interpreter` — Tree-walk interpreter. Evaluates AST directly: value system, environment/scope chain, expression/statement evaluation, builtins, test runner. Depends on `ast`, `token`, `lexer`, `parser`. 91 tests.
 
 ### Naming Conventions
 

@@ -130,7 +130,7 @@ The foundation of the Aura toolchain is fully implemented and tested.
 
 ---
 
-## Phase 3: Code Generation — 🚧 UP NEXT
+## Phase 3: Tree-Walk Interpreter — ✅ COMPLETE
 
 **Goal:** Execute Aura programs via a tree-walk interpreter, completing the end-to-end vibe coding loop.
 
@@ -222,9 +222,13 @@ The tree-walk interpreter is the **highest-impact next step** for the AI-first m
 
 **Package:** `pkg/codegen/golang`
 
-### Phase 3 Milestone
+### Phase 3 Deliverables
 
-`aura run <file>` should execute a complete Aura program and produce output. `aura test <file>` should run test blocks and report structured results that AI agents can parse.
+- ✅ `pkg/interpreter/` with 5 source files: value system, environment, evaluator, module runner, test runner
+- ✅ CLI commands: `aura run`, `aura test`, `aura repl`
+- ✅ Full expression/statement evaluation (arithmetic, comparison, logic, control flow, structs, enums, match, closures, lambdas, list comprehensions)
+- ✅ 14 built-in functions (print, len, str, int, float, range, type_of, abs, min, max, Ok, Err, Some, None)
+- ✅ **91 new tests** — all passing (211 total across all packages)
 
 ---
 
@@ -346,3 +350,4 @@ See [DEVELOPMENT.md](DEVELOPMENT.md) for setup instructions, architecture overvi
 |------|---------|-------|
 | 2026-03-17 | v0.1 | Phase 1 complete; roadmap published |
 | 2026-03-17 | v0.2 | Phase 2 complete (type checker, 83 tests); Phase 3 (interpreter) selected as next |
+| 2026-03-17 | v0.3 | Phase 3 complete (tree-walk interpreter, 91 tests, 211 total); run/test/repl CLI |

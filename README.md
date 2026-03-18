@@ -36,7 +36,7 @@ Built in Go. Implements lexing, parsing, AST construction, canonical source form
 
 ```
 aura-toolchain/
-├── cmd/aura/main.go           # CLI entry point (format, parse, check commands)
+├── cmd/aura/main.go           # CLI entry point (format, parse, check, run, test, repl)
 ├── pkg/
 │   ├── token/token.go         # Token types, positions, spans
 │   ├── lexer/lexer.go         # Indentation-sensitive lexer (INDENT/DEDENT)
@@ -45,9 +45,15 @@ aura-toolchain/
 │   ├── formatter/formatter.go # AST → canonical source formatter
 │   ├── symbols/symbols.go     # Symbol table & scope management
 │   ├── types/types.go         # Type system representation & subtyping
-│   └── checker/               # Type checker & semantic analysis
-│       ├── checker.go         # Multi-pass type checker
-│       └── errors.go          # Structured, AI-parseable error diagnostics
+│   ├── checker/               # Type checker & semantic analysis
+│   │   ├── checker.go         # Multi-pass type checker
+│   │   └── errors.go          # Structured, AI-parseable error diagnostics
+│   └── interpreter/           # Tree-walk interpreter (Phase 3)
+│       ├── value.go           # Value types (Int, Float, String, Bool, etc.)
+│       ├── env.go             # Environment with scope chain
+│       ├── eval.go            # Expression & statement evaluator
+│       ├── interpreter.go     # Module execution & builtins
+│       └── test.go            # Test block runner
 ├── testdata/                  # Sample .aura files
 │   ├── models.aura            # AuraTask models (struct, enum, type aliases)
 │   ├── specs.aura             # Specification blocks
@@ -102,6 +108,24 @@ go build -o aura ./cmd/aura
 
 ```bash
 ./aura check --json testdata/service.aura
+```
+
+**Run** an Aura program (executes `main()` function):
+
+```bash
+./aura run program.aura
+```
+
+**Run test blocks** in an Aura file:
+
+```bash
+./aura test testdata/models.aura
+```
+
+**Interactive REPL**:
+
+```bash
+./aura repl
 ```
 
 ## Language Features Supported
@@ -161,6 +185,7 @@ go test ./... -v
 - `pkg/symbols/` — 9 tests covering symbol table, scopes, and lookups
 - `pkg/types/` — 26 tests covering type system, equality, subtyping, and registry
 - `pkg/checker/` — 48 tests covering type checking, effects, specs, and error diagnostics
+- `pkg/interpreter/` — 91 tests covering values, environment, expressions, statements, control flow, builtins, structs, enums, match, closures, and test runner
 
 ### Round-Trip Guarantee
 
