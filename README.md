@@ -30,19 +30,24 @@
 
 A complete toolchain for the **Aura programming language** — a Python-inspired, statically typed language with specification-driven development, algebraic types, and effect tracking.
 
-Built in Go. Implements lexing, parsing, AST construction, and canonical source formatting.
+Built in Go. Implements lexing, parsing, AST construction, canonical source formatting, and type checking with semantic analysis.
 
 ## Project Structure
 
 ```
 aura-toolchain/
-├── cmd/aura/main.go           # CLI entry point (format, parse commands)
+├── cmd/aura/main.go           # CLI entry point (format, parse, check commands)
 ├── pkg/
 │   ├── token/token.go         # Token types, positions, spans
 │   ├── lexer/lexer.go         # Indentation-sensitive lexer (INDENT/DEDENT)
 │   ├── ast/ast.go             # Complete AST node definitions
 │   ├── parser/parser.go       # Recursive descent parser
-│   └── formatter/formatter.go # AST → canonical source formatter
+│   ├── formatter/formatter.go # AST → canonical source formatter
+│   ├── symbols/symbols.go     # Symbol table & scope management
+│   ├── types/types.go         # Type system representation & subtyping
+│   └── checker/               # Type checker & semantic analysis
+│       ├── checker.go         # Multi-pass type checker
+│       └── errors.go          # Structured, AI-parseable error diagnostics
 ├── testdata/                  # Sample .aura files
 │   ├── models.aura            # AuraTask models (struct, enum, type aliases)
 │   ├── specs.aura             # Specification blocks
@@ -85,6 +90,18 @@ go build -o aura ./cmd/aura
 
 ```bash
 ./aura format -w testdata/service.aura
+```
+
+**Type-check** an Aura source file:
+
+```bash
+./aura check testdata/models.aura
+```
+
+**Type-check with JSON output** (for AI agents):
+
+```bash
+./aura check --json testdata/service.aura
 ```
 
 ## Language Features Supported
@@ -141,6 +158,9 @@ go test ./... -v
 - `pkg/lexer/` — 11 tests covering tokenization, indentation, comments, edge cases
 - `pkg/parser/` — 16 tests covering all language constructs
 - `pkg/formatter/` — 9 tests including round-trip verification (parse → format → parse = same AST)
+- `pkg/symbols/` — 9 tests covering symbol table, scopes, and lookups
+- `pkg/types/` — 26 tests covering type system, equality, subtyping, and registry
+- `pkg/checker/` — 48 tests covering type checking, effects, specs, and error diagnostics
 
 ### Round-Trip Guarantee
 

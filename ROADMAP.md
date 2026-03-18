@@ -30,8 +30,8 @@ These principles guide every phase of development. When evaluating features, tra
 | Phase | Name | Status | Estimated Effort |
 |-------|------|--------|------------------|
 | 1 | Syntax (Lexer, Parser, Formatter) | ✅ COMPLETE | — |
-| 2 | Semantic Analysis | 🔲 Not Started | 8–12 weeks |
-| 3 | Code Generation | 🔲 Not Started | 6–10 weeks |
+| 2 | Semantic Analysis | ✅ COMPLETE | — |
+| 3 | Code Generation (Interpreter) | 🚧 **UP NEXT** | 4–6 weeks |
 | 4 | Runtime & Standard Library | 🔲 Not Started | 8–12 weeks |
 | 5 | Advanced Tooling & Ecosystem | 🔲 Not Started | Ongoing |
 
@@ -60,123 +60,145 @@ The foundation of the Aura toolchain is fully implemented and tested.
 
 ---
 
-## Phase 2: Semantic Analysis
+## Phase 2: Semantic Analysis — ✅ COMPLETE
 
 **Goal:** Validate that parsed programs are meaningful — names resolve, types check, effects are tracked, and specs are verified.
 
-> 🤖 **AI optimization:** This phase is critical for AI code generation. Type checking, effect validation, and spec verification give AI agents **immediate, automated feedback** on whether generated code is correct. Every error message should be structured enough for an AI to parse and fix automatically. Refinement type checking means AI can encode constraints in types rather than writing validation code.
+> 🤖 **AI optimization:** This phase is critical for AI code generation. Type checking, effect validation, and spec verification give AI agents **immediate, automated feedback** on whether generated code is correct. Every error message is structured and JSON-serializable for AI to parse and fix automatically.
 
-**Dependencies:** Phase 1 (complete)
+**Completed:** 2026-03-17
 
-### 2.1 Symbol Table & Name Resolution
+### 2.1 Symbol Table & Scope Management
 
-**Complexity:** Medium | **Estimate:** 2–3 weeks
+- [x] Hierarchical symbol table with scope kinds (Module, Function, Block, Loop, Test)
+- [x] Symbol definition with duplicate detection
+- [x] Hierarchical symbol lookup (walks parent scopes)
+- [x] Local-only lookup for shadowing semantics
+- [x] Loop context detection (`IsInsideLoop`) for break/continue validation
+- [x] Enclosing function resolution for return type checking
 
-- [ ] Build a hierarchical symbol table (module → function → block scopes)
-- [ ] Resolve all identifier references to their declarations
-- [ ] Handle qualified names (`std.time.Instant`, `TaskError.NotFound`)
-- [ ] Detect undefined names, duplicate definitions, and shadowing
-- [ ] Resolve `import` statements and track module dependencies
-- [ ] Handle visibility (`pub` vs private) access rules
+**Package:** `pkg/symbols` — 9 tests ✅
 
-**Package:** `pkg/resolver`
+### 2.2 Type System
 
-### 2.2 Type Checker
+- [x] Complete type representation (Primitive, Struct, Enum, Union, Function, Option, Result, Refinement, TypeParam, Never, Any, None, Alias, Intersection, Tuple, List, Map, Set, StringLiteral)
+- [x] Built-in primitive singletons (Int, Float, String, Bool, None, Never, Any)
+- [x] Type equality checking (`Equal()`)
+- [x] Subtyping/assignability rules (`IsAssignableTo()`) including:
+  - Never as bottom type, Any as top type
+  - None/T to Option[T], refinement to base type
+  - String literal to String/Union, Int to Float widening
+  - Struct width subtyping
+- [x] Alias and refinement unwrapping (`Underlying()`)
+- [x] Type registry with built-in pre-population
 
-**Complexity:** High | **Estimate:** 3–4 weeks
+**Package:** `pkg/types` — 26 tests ✅
 
-- [ ] Implement bidirectional type inference (check mode + infer mode)
-- [ ] Type-check all expression forms (binary ops, calls, field access, index, etc.)
-- [ ] Validate struct field types and default values
-- [ ] Check function parameter types, return types, and all return paths
-- [ ] Implement structural subtyping rules (width subtyping for structs)
-- [ ] Handle generic type parameters and type argument inference
-- [ ] Validate union types (`"pending" | "done"`) and literal types
-- [ ] Implement `Option[T]` / `Result[T, E]` type checking
-- [ ] Handle the `?` propagation operator desugaring
-- [ ] Validate pattern exhaustiveness in `match` statements
-- [ ] Implement type compatibility checks (`T <: U`)
+### 2.3 Type Checker
 
-**Package:** `pkg/typechecker`
+- [x] Multi-pass architecture (types → specs → functions → constants → bodies → spec validation → tests)
+- [x] Bidirectional type inference for all expression forms
+- [x] Struct construction validation (missing/unknown fields)
+- [x] Function call type checking with effect propagation
+- [x] Pattern matching with enum exhaustiveness checking
+- [x] Effect tracking and validation (declared vs. required effects)
+- [x] Spec contract validation (inputs, effects)
+- [x] Control flow validation (break/continue in loops, return in functions)
+- [x] Mutability enforcement (immutable by default)
+- [x] AI-parseable structured error output (JSON format with error codes, expected/got, fix suggestions)
+- [x] CLI `aura check` command with `--json` flag for AI agents
 
-### 2.3 Refinement Type Checking
+**Package:** `pkg/checker` — 48 tests ✅
 
-**Complexity:** High | **Estimate:** 2–3 weeks
+### Deferred to Future Phases
 
-- [ ] Parse and validate refinement predicates (`where len >= 1 and len <= 64`)
-- [ ] Static predicate evaluation for constant expressions
-- [ ] Insert runtime assertion stubs for predicates that can't be statically verified
-- [ ] Track refinement flow through assignments and function boundaries
-- [ ] Support built-in predicates: `len`, `self`, `matches`, `in`
+- Refinement predicate static evaluation (Phase 4 — runtime assertions)
+- Import resolution and cross-module type checking (Phase 4/5)
+- Visibility (`pub`) enforcement across modules (Phase 4/5)
+- Generic type argument inference (Phase 3/4 as needed)
+- Transitive effect inference for private functions (Phase 4)
 
-**Package:** `pkg/typechecker/refinement`
+### Phase 2 Milestone — ✅ Achieved
 
-### 2.4 Effect System
-
-**Complexity:** Medium | **Estimate:** 2 weeks
-
-- [ ] Parse effect annotations from function signatures (`with db, time`)
-- [ ] Build a call graph from the AST
-- [ ] Compute transitive effect closure for each function
-- [ ] Verify declared effects match actual effects (required ⊆ declared)
-- [ ] Enforce explicit effects on `pub` functions
-- [ ] Infer effects for private functions without annotations
-- [ ] Verify spec ↔ function effect agreement
-
-**Package:** `pkg/effects`
-
-### 2.5 Spec Validation
-
-**Complexity:** Medium | **Estimate:** 1–2 weeks
-
-- [ ] Bind `satisfies` declarations to spec blocks
-- [ ] Validate spec input names and types match function parameters
-- [ ] Validate spec effects match function effects (exact match)
-- [ ] Validate spec error types are covered by the function's return type
-- [ ] Emit warnings for possible spec guarantee violations (where detectable)
-- [ ] Enforce spec uniqueness (one function per spec, one spec per function)
-
-**Package:** `pkg/speccheck`
-
-### Phase 2 Milestone
-
-At the end of Phase 2, `aura check <file>` should:
-- Report all name resolution errors with source locations
-- Report type errors with clear messages and suggestions
-- Report effect mismatches and missing capabilities
-- Report spec violations
-- Successfully validate all testdata files
+`aura check <file>` now:
+- ✅ Reports name resolution errors with source locations
+- ✅ Reports type errors with clear messages, expected/got info, and fix suggestions
+- ✅ Reports effect mismatches and missing capabilities
+- ✅ Reports spec contract violations
+- ✅ Outputs structured JSON for AI agent consumption (`--json` flag)
+- ✅ **83 new tests** across symbols (9), types (26), checker (48) — all passing
 
 ---
 
-## Phase 3: Code Generation
+## Phase 3: Code Generation — 🚧 UP NEXT
 
-**Goal:** Execute Aura programs, either via interpretation or compilation.
+**Goal:** Execute Aura programs via a tree-walk interpreter, completing the end-to-end vibe coding loop.
 
-> 🤖 **AI optimization:** Code generation outputs should be deterministic and predictable so AI agents can reason about the compilation process. The interpreter should provide structured error output (JSON-friendly) that AI agents can parse for debugging. Consider a "dry-run" mode that validates without executing — useful for AI testing loops.
+> 🤖 **AI optimization:** Code generation outputs should be deterministic and predictable so AI agents can reason about the compilation process. The interpreter provides structured error output (JSON-friendly) that AI agents can parse for debugging. A "dry-run" mode validates without executing — useful for AI testing loops.
 
-**Dependencies:** Phase 2 (semantic analysis)
+**Dependencies:** Phase 2 ✅ (semantic analysis complete)
 
-### 3.1 Tree-Walk Interpreter (Recommended First Target)
+### Why Phase 3 Now? — Rationale
+
+The tree-walk interpreter is the **highest-impact next step** for the AI-first mission:
+
+1. **Closes the vibe coding feedback loop** — Without execution, the workflow is: spec → generate → check. With the interpreter: spec → generate → check → **run → see output → iterate**. This is the complete AI development cycle.
+2. **Builds directly on Phase 2** — The typed AST from the checker is the interpreter's input. All the type information, scope resolution, and validation work is already done.
+3. **Enables AI test-driven development** — AI agents can generate code, run `aura test` blocks, observe failures, and self-correct. This is the killer feature for vibe coding.
+4. **Lower complexity than alternatives** — A tree-walk interpreter (~4–6 weeks) is faster to build than bytecode compilation (~6–10 weeks) and more self-contained than Go transpilation (which requires a Go runtime dependency).
+5. **Validates the language design** — Running real programs will surface language design issues early, before investing in optimization.
+
+### 3.1 Tree-Walk Interpreter (Primary Target)
 
 **Complexity:** Medium-High | **Estimate:** 4–6 weeks
 
-- [ ] Implement a value system (AuraInt, AuraString, AuraStruct, AuraEnum, etc.)
-- [ ] Evaluate all expression types
-- [ ] Execute all statement types (let, assign, return, if, match, for, while)
-- [ ] Implement function calls with argument binding and default values
-- [ ] Implement pattern matching evaluation
-- [ ] Handle struct construction and field access
-- [ ] Implement list comprehensions and lambda evaluation
-- [ ] Implement string interpolation at runtime
-- [ ] Handle `Option` and `Result` types with `?` propagation
-- [ ] Implement effect capability injection and checking at runtime
+#### 3.1.1 Value System
+- [ ] Implement Aura value types (AuraInt, AuraFloat, AuraString, AuraBool, AuraNone)
+- [ ] Implement composite values (AuraList, AuraMap, AuraSet, AuraTuple)
+- [ ] Implement AuraStruct with field access and construction
+- [ ] Implement AuraEnum with variant matching
+- [ ] Implement AuraOption (Some/None) and AuraResult (Ok/Err)
+- [ ] Implement AuraFunction (closures with captured environment)
+
+#### 3.1.2 Expression Evaluation
+- [ ] Evaluate literals (int, float, string, bool, none)
+- [ ] Evaluate binary and unary operations with type-appropriate semantics
+- [ ] Evaluate function calls with argument binding and default values
+- [ ] Evaluate field access and index operations
+- [ ] Evaluate string interpolation at runtime
+- [ ] Evaluate list comprehensions and lambda expressions
+- [ ] Evaluate `?` propagation for Option/Result types
+- [ ] Evaluate pipeline operator (`|>`)
+
+#### 3.1.3 Statement Execution
+- [ ] Execute `let` bindings (immutable and mutable)
+- [ ] Execute assignments (with mutability checking)
+- [ ] Execute `return`, `break`, `continue` (as control flow signals)
+- [ ] Execute `if`/`elif`/`else` chains
+- [ ] Execute `match` with pattern matching evaluation
+- [ ] Execute `for ... in` loops with iterator protocol
+- [ ] Execute `while` loops
+
+#### 3.1.4 Effect & Runtime Infrastructure
+- [ ] Environment/scope management for interpreter state
+- [ ] Effect capability injection via `with` blocks
+- [ ] Built-in print/assert functions
+- [ ] Structured runtime error output (JSON for AI agents)
+- [ ] Test block runner (`aura test <file>`)
 
 **Package:** `pkg/interpreter`
 
-### 3.2 Bytecode Compiler (Optional, Future)
+#### 3.1.5 CLI Integration
+- [ ] `aura run <file>` — execute an Aura program
+- [ ] `aura test <file>` — run test blocks with pass/fail reporting
+- [ ] `--json` flag for structured output (AI agent consumption)
+- [ ] `--dry-run` flag for validation without execution
+
+### 3.2 Bytecode Compiler (Future — Phase 5+)
 
 **Complexity:** Very High | **Estimate:** 6–10 weeks
+
+*Deferred. A tree-walk interpreter is sufficient for the AI-first use case where correctness and rapid feedback matter more than raw performance.*
 
 - [ ] Design a bytecode instruction set for Aura
 - [ ] Implement a bytecode compiler from the typed AST
@@ -186,9 +208,11 @@ At the end of Phase 2, `aura check <file>` should:
 
 **Package:** `pkg/compiler`, `pkg/vm`
 
-### 3.3 Transpilation to Go (Alternative)
+### 3.3 Transpilation to Go (Future — Phase 5+)
 
 **Complexity:** Medium-High | **Estimate:** 4–6 weeks
+
+*Deferred. May revisit after the interpreter proves out the language semantics.*
 
 - [ ] Generate Go source code from the typed Aura AST
 - [ ] Map Aura types to Go types
@@ -200,7 +224,7 @@ At the end of Phase 2, `aura check <file>` should:
 
 ### Phase 3 Milestone
 
-`aura run <file>` should execute a complete Aura program and produce output.
+`aura run <file>` should execute a complete Aura program and produce output. `aura test <file>` should run test blocks and report structured results that AI agents can parse.
 
 ---
 
@@ -321,3 +345,4 @@ See [DEVELOPMENT.md](DEVELOPMENT.md) for setup instructions, architecture overvi
 | Date | Version | Notes |
 |------|---------|-------|
 | 2026-03-17 | v0.1 | Phase 1 complete; roadmap published |
+| 2026-03-17 | v0.2 | Phase 2 complete (type checker, 83 tests); Phase 3 (interpreter) selected as next |
