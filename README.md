@@ -175,6 +175,20 @@ pub struct Task:
 
 The formatter preserves this exact canonical form. The parser produces a full AST that can be inspected, transformed, or used for code generation.
 
+## Documentation
+
+### User Documentation
+
+- **[Getting Started](user_docs/getting_started.md)** — Installation, first program, and basic usage
+- **[Language Guide](user_docs/language_guide.md)** — Tutorial-style guide covering all language features with examples
+- **[Language Reference](user_docs/language_reference.md)** — Formal reference for types, syntax, effects, and specifications
+- **[Examples](user_docs/examples.md)** — Complete working examples covering every language feature
+
+### Development
+
+- **[Roadmap](ROADMAP.md)** — Phased development plan from parser to full language
+- **[Development Guide](DEVELOPMENT.md)** — Architecture overview, implementation checklists, testing strategy, and contribution guidelines
+
 ## License
 
 MIT
