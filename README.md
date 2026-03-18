@@ -1,5 +1,33 @@
 # Aura Toolchain
 
+## 🤖 AI-First Language — Designed for AI-Human Collaboration
+
+> **Aura is an AI-first programming language.** Every design decision optimizes for AI code generation, AI parseability, and seamless AI-human "vibe coding."
+
+**This is the primary design goal of Aura.** The language exists to make AI agents the best developers they can be, while keeping code clear for human review.
+
+### Why AI-First?
+
+| Aura Feature | How It Helps AI |
+|---|---|
+| **Spec blocks** | Structured, machine-readable contracts — AI knows *what* to build before writing *how* |
+| **Effect annotations** (`with db, time`) | AI knows exactly what side effects are allowed — no hidden state mutations |
+| **Refinement types** (`String where len >= 1`) | Data constraints live in the type, not in scattered validation code |
+| **`satisfies` clauses** | AI-generated code is automatically verified against the spec |
+| **Explicit types everywhere** | Every function boundary is a clear contract — zero guessing |
+| **Structured error types** | AI can generate exhaustive error handling from the type definition |
+
+### The Vibe Coding Flow
+
+1. **Human writes the spec** — structured intent, not ambiguous prose
+2. **AI generates the implementation** — using the spec as a complete contract
+3. **Compiler validates** — types, effects, and spec satisfaction checked automatically
+4. **Human reviews** — the spec makes intent clear, so review is fast
+
+📖 **Read the full mission statement: [AI_MISSION.md](AI_MISSION.md)**
+
+---
+
 A complete toolchain for the **Aura programming language** — a Python-inspired, statically typed language with specification-driven development, algebraic types, and effect tracking.
 
 Built in Go. Implements lexing, parsing, AST construction, and canonical source formatting.
@@ -183,6 +211,10 @@ The formatter preserves this exact canonical form. The parser produces a full AS
 - **[Language Guide](user_docs/language_guide.md)** — Tutorial-style guide covering all language features with examples
 - **[Language Reference](user_docs/language_reference.md)** — Formal reference for types, syntax, effects, and specifications
 - **[Examples](user_docs/examples.md)** — Complete working examples covering every language feature
+
+### AI-First Mission
+
+- **[AI Mission Statement](AI_MISSION.md)** — Why Aura is AI-first, design principles, and guidelines for AI contributors
 
 ### Development
 

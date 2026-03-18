@@ -4,6 +4,28 @@ A tutorial-style guide covering all of Aura's language features with examples.
 
 ---
 
+## Aura: Designed for AI-Human Pair Programming
+
+Aura is an **AI-first programming language** — built from the ground up for seamless collaboration between human developers and AI agents.
+
+As you learn Aura, you'll notice features that make it uniquely suited for AI-assisted development:
+
+- **Specifications (specs)** let you describe *what* you want in a structured format that AI can parse unambiguously. Instead of writing vague comments, you write machine-readable contracts — and AI generates the implementation.
+- **Explicit effects** (`with db, time, net`) tell AI exactly what side effects a function is allowed to have. AI-generated code can't accidentally introduce database writes or network calls that weren't part of the plan.
+- **Refinement types** (`String where len >= 1`) encode data constraints directly in the type system. AI doesn't need to hunt for validation logic — the constraints are right there in the type definition.
+- **`satisfies` clauses** link implementations to their specs, so the compiler can automatically verify that AI-generated code meets requirements.
+
+This means the typical workflow in Aura is:
+
+1. **You write the spec** — structured intent, clear contracts
+2. **AI generates the implementation** — using the spec as a complete blueprint
+3. **The compiler validates** — types, effects, specs all checked automatically
+4. **You review** — the spec makes your intent clear, so review is fast
+
+For the full AI-first mission and design philosophy, see [AI_MISSION.md](../AI_MISSION.md).
+
+---
+
 ## Table of Contents
 
 1. [Modules & Imports](#modules--imports)

@@ -2,6 +2,44 @@
 
 This document covers everything you need to know to contribute to the Aura toolchain.
 
+> 🤖 **Aura is an AI-first language.** All development decisions should be evaluated through the lens of AI-human collaboration. See [AI_MISSION.md](AI_MISSION.md) for the full mission statement.
+
+---
+
+## Designing for AI Developers
+
+Aura's primary audience is **AI agents generating and reasoning about code**, with human developers as reviewers and collaborators. Every feature, API, and error message should be designed with this in mind.
+
+### Design Decision Framework
+
+When faced with trade-offs, apply this priority order:
+
+1. **AI flow** — Does this make AI code generation faster and more accurate?
+2. **Compiler verifiability** — Can the compiler check this automatically?
+3. **Human readability** — Is this clear for human review?
+4. **Brevity** — Is this concise? (Lowest priority — clarity always wins over conciseness)
+
+### Code Review Checklist: AI-First Design
+
+When reviewing PRs or designing features, ask these questions:
+
+- [ ] **Does this feature help AI understand intent?** — Can an AI read the syntax/output and know exactly what to do without surrounding context?
+- [ ] **Is the representation structured?** — Prefer structured data (spec blocks, typed annotations) over freeform text (comments, naming conventions).
+- [ ] **Are error messages machine-parseable?** — Error output should include structured fields (error code, location, expected vs actual) that AI agents can parse and act on automatically.
+- [ ] **Does this integrate with specs?** — Every new feature should consider how it interacts with the specification system. Can specs reference it? Can the compiler validate it?
+- [ ] **Are effects explicit?** — If a feature introduces side effects, are they tracked in the effect system?
+- [ ] **Is it deterministic?** — Given the same input, does the feature always produce the same output? AI agents depend on deterministic behavior.
+
+### Testing: AI Code Generation Scenarios
+
+When writing tests for new features, include scenarios that validate AI-relevant use cases:
+
+- **Spec-to-implementation validation** — Test that code satisfying a spec actually passes all spec checks.
+- **Round-trip stability** — AI-generated code, when formatted, should be identical to human-written canonical form.
+- **Error message quality** — Test that error messages include enough information for an AI to fix the issue automatically (error code, location, suggestion).
+- **Effect tracking accuracy** — Test that the effect system correctly identifies all effects, especially for complex call graphs that AI might generate.
+- **Edge cases from AI generation** — AI may produce valid but unusual code patterns. Test that these are handled correctly (e.g., deeply nested expressions, max-length identifiers, unusual but valid type combinations).
+
 ---
 
 ## Architecture Overview

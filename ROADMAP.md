@@ -2,6 +2,27 @@
 
 > A phased plan for building Aura from a working parser into a fully functional programming language.
 
+> 🤖 **Aura is an AI-first language.** Every phase and feature in this roadmap is evaluated against a core question: **Does this make AI code generation and AI-human collaboration better?** See [AI_MISSION.md](AI_MISSION.md) for the full mission statement.
+
+---
+
+## AI-First Design Principles
+
+These principles guide every phase of development. When evaluating features, trade-offs, or priorities, apply them in order:
+
+1. **AI parseability first** — Can an AI agent read this feature's output and know exactly what to do? Structured, unambiguous representations always win.
+2. **Machine-checkable contracts** — Every constraint, effect, and requirement should be verifiable by the compiler, not dependent on human review alone.
+3. **Explicit over implicit** — If information exists (types, effects, error cases, constraints), it must be in the syntax. Hidden conventions are the enemy of AI code generation.
+4. **Specs as the interface** — Specs are how humans communicate intent to AI. Every feature should consider: how does this interact with the spec system?
+5. **Vibe coding flow** — The human writes *what* (specs), the AI writes *how* (implementation), the compiler validates *correctness*. Features should reinforce this loop.
+
+**Feature evaluation checklist:**
+- [ ] Does this feature help AI generate correct code faster?
+- [ ] Is the feature's syntax unambiguous and machine-parseable?
+- [ ] Does it reduce the need for AI to read surrounding context?
+- [ ] Can the compiler validate it automatically?
+- [ ] Does it integrate with specs and effects?
+
 ---
 
 ## Phase Overview
@@ -17,6 +38,8 @@
 ---
 
 ## Phase 1: Syntax — ✅ COMPLETE
+
+> 🤖 **AI optimization:** The parser and AST produce structured, unambiguous representations that AI agents can consume directly. The formatter ensures canonical output — AI-generated code always looks the same as human-written code.
 
 The foundation of the Aura toolchain is fully implemented and tested.
 
@@ -40,6 +63,8 @@ The foundation of the Aura toolchain is fully implemented and tested.
 ## Phase 2: Semantic Analysis
 
 **Goal:** Validate that parsed programs are meaningful — names resolve, types check, effects are tracked, and specs are verified.
+
+> 🤖 **AI optimization:** This phase is critical for AI code generation. Type checking, effect validation, and spec verification give AI agents **immediate, automated feedback** on whether generated code is correct. Every error message should be structured enough for an AI to parse and fix automatically. Refinement type checking means AI can encode constraints in types rather than writing validation code.
 
 **Dependencies:** Phase 1 (complete)
 
@@ -128,6 +153,8 @@ At the end of Phase 2, `aura check <file>` should:
 
 **Goal:** Execute Aura programs, either via interpretation or compilation.
 
+> 🤖 **AI optimization:** Code generation outputs should be deterministic and predictable so AI agents can reason about the compilation process. The interpreter should provide structured error output (JSON-friendly) that AI agents can parse for debugging. Consider a "dry-run" mode that validates without executing — useful for AI testing loops.
+
 **Dependencies:** Phase 2 (semantic analysis)
 
 ### 3.1 Tree-Walk Interpreter (Recommended First Target)
@@ -181,6 +208,8 @@ At the end of Phase 2, `aura check <file>` should:
 
 **Goal:** Provide the standard library and runtime support needed for real programs.
 
+> 🤖 **AI optimization:** Standard library APIs should have spec blocks defining their contracts, making them instantly understandable by AI agents. Effect providers should be mockable by default, enabling AI to generate testable code without external dependencies. Library functions should follow consistent patterns so AI can predict APIs for unfamiliar modules.
+
 **Dependencies:** Phase 3 (code generation)
 
 ### 4.1 Core Runtime
@@ -224,6 +253,8 @@ The AuraTask example from the spec should run end-to-end with mocked effects in 
 ## Phase 5: Advanced Tooling & Ecosystem
 
 **Goal:** Build the developer experience and ecosystem around Aura.
+
+> 🤖 **AI optimization:** This phase is where AI-first design pays off most. The LSP should expose spec/effect/type information as structured data for AI agents. The spec-to-implementation pipeline (§5.3) is the flagship AI feature — it's the full realization of the vibe coding workflow. Package metadata should be machine-readable so AI can discover and use libraries without human guidance.
 
 **Dependencies:** Phases 2–4 (progressive)
 
