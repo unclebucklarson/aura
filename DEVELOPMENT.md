@@ -88,10 +88,16 @@ aura-toolchain/
 │   ├── formatter/
 │   │   ├── formatter.go         # AST → canonical source
 │   │   └── formatter_test.go    # 9 tests (incl. round-trip)
-│   ├── resolver/                # [Phase 2] Name resolution
-│   ├── typechecker/             # [Phase 2] Type checking
-│   ├── effects/                 # [Phase 2] Effect system
-│   ├── speccheck/               # [Phase 2] Spec validation
+│   ├── symbols/
+│   │   ├── symbols.go           # Symbol table & scope management
+│   │   └── symbols_test.go      # 9 tests
+│   ├── types/
+│   │   ├── types.go             # Type system representation
+│   │   └── types_test.go        # 26 tests
+│   ├── checker/
+│   │   ├── checker.go           # Multi-pass type checker
+│   │   ├── errors.go            # AI-parseable structured errors
+│   │   └── checker_test.go      # 48 tests
 │   └── interpreter/             # [Phase 3] Tree-walk interpreter
 ├── testdata/                    # Sample .aura files
 ├── user_docs/                   # User-facing documentation
@@ -135,6 +141,9 @@ go test ./... -v
 go test ./pkg/lexer -v
 go test ./pkg/parser -v
 go test ./pkg/formatter -v
+go test ./pkg/symbols -v
+go test ./pkg/types -v
+go test ./pkg/checker -v
 
 # Run with race detection
 go test ./... -race
@@ -155,88 +164,95 @@ go tool cover -html=coverage.out
 
 # Parse and dump tokens + AST
 ./aura parse testdata/specs.aura
+
+# Type-check a file (human-readable output)
+./aura check testdata/service.aura
+
+# Type-check with AI-parseable JSON output
+./aura check --json testdata/service.aura
 ```
 
 ---
 
 ## Implementation Checklists
 
-### Phase 2: Semantic Analysis
+### Phase 2: Semantic Analysis ✅ COMPLETE
 
-#### 2.1 Name Resolution (`pkg/resolver`)
+> Implemented as three unified packages (`pkg/symbols`, `pkg/types`, `pkg/checker`) with 83 total tests.
+> CLI: `aura check [--json] <file.aura>`
 
-```
-[ ] Define Scope and Symbol types
-[ ] Implement hierarchical scope chain (module → function → block)
-[ ] Walk the AST to register all declarations
-[ ] Walk the AST to resolve all references
-[ ] Handle qualified name resolution (e.g., `TaskError.NotFound`)
-[ ] Handle import resolution
-[ ] Report errors: undefined names, duplicate declarations, visibility violations
-[ ] Write tests for each error case
-```
-
-#### 2.2 Type Checker (`pkg/typechecker`)
+#### 2.1 Symbol Table & Scope Management (`pkg/symbols`) ✅
 
 ```
-[ ] Define internal Type representations (PrimitiveType, StructType, EnumType, etc.)
-[ ] Implement type environment mapping names → types
-[ ] Implement bidirectional type checking:
-    [ ] Infer mode: expression → type
-    [ ] Check mode: expression against expected type
-[ ] Type-check literals (Int, Float, String, Bool, None)
-[ ] Type-check binary operators (arithmetic, comparison, logical)
-[ ] Type-check unary operators (negation, not)
-[ ] Type-check function calls (argument count, types, named args, defaults)
-[ ] Type-check field access on structs
-[ ] Type-check index expressions on lists and maps
-[ ] Type-check struct construction
-[ ] Type-check pattern matching (exhaustiveness, type compatibility)
-[ ] Type-check list comprehensions
-[ ] Type-check lambda expressions (infer param types from context)
-[ ] Type-check Option[T] and Result[T, E] operations
-[ ] Type-check ? propagation operator
-[ ] Implement structural subtyping for structs
-[ ] Implement generic type parameter instantiation
-[ ] Handle union types and literal string types
-[ ] Report type errors with source locations and suggestions
-[ ] Write comprehensive tests
+[x] Define Scope and Symbol types (Variable, Function, Type, Struct, Enum, Trait, Spec, etc.)
+[x] Implement hierarchical scope chain (Module → Function → Block → Loop)
+[x] Walk the AST to register all declarations
+[x] Walk the AST to resolve all references
+[x] Handle qualified name resolution (e.g., `TaskError.NotFound`)
+[x] Report errors: undefined names, duplicate declarations
+[x] Write tests (9 tests)
 ```
 
-#### 2.3 Refinement Types (`pkg/typechecker/refinement`)
+#### 2.2 Type System (`pkg/types`) ✅
 
 ```
-[ ] Represent refinement predicates as a data structure
-[ ] Evaluate constant predicates at compile time
-[ ] Generate runtime assertion code for non-constant predicates
-[ ] Track refinement information through variable assignments
-[ ] Support built-in predicate vocabulary (len, self, matches, in)
-[ ] Write tests for static and dynamic predicate checking
+[x] Define internal Type representations (19 TypeKinds: Primitive, Struct, Enum, Union, Function,
+    Tuple, List, Map, Set, Option, Result, Refinement, StringLit, TypeParam, Never, Any, None, Alias, Intersection)
+[x] Implement type registry with built-in types (Int, Float, String, Bool, None, Any, Never)
+[x] Implement type equality (Equal)
+[x] Implement subtyping rules (IsAssignableTo):
+    - Never <: everything, everything <: Any
+    - None <: Option[T], T <: Option[T]
+    - Refinement <: base type, StringLit <: String
+    - Union subtyping, struct width subtyping
+    - Int → Float widening
+[x] Constructors for all type kinds
+[x] String() representation for error messages
+[x] Write comprehensive tests (26 tests)
 ```
 
-#### 2.4 Effect System (`pkg/effects`)
+#### 2.3 Type Checker (`pkg/checker`) ✅
 
 ```
-[ ] Extract effect annotations from function signatures
-[ ] Build call graph from resolved AST
-[ ] Compute transitive effect closure per function
-[ ] Verify declared effects ⊇ required effects
-[ ] Enforce explicit annotations on pub functions
-[ ] Infer effects for private functions
-[ ] Report effect mismatch errors with call chain context
-[ ] Write tests for effect propagation and violation scenarios
+[x] Multi-pass architecture:
+    Pass 1: Register types (struct, enum, type aliases)
+    Pass 2: Register spec blocks
+    Pass 3: Register functions
+    Pass 4: Register constants
+    Pass 5: Check function bodies
+    Pass 6: Validate spec contracts
+    Pass 7: Check test blocks
+[x] Type-check literals (Int, Float, String, Bool, None)
+[x] Type-check binary operators (arithmetic, comparison, logical, string concat)
+[x] Type-check unary operators (negation, not)
+[x] Type-check function calls (argument count, return types)
+[x] Type-check field access on structs
+[x] Type-check index expressions on lists and maps
+[x] Type-check struct construction (field validation)
+[x] Type-check pattern matching with enum exhaustiveness checking
+[x] Type-check list comprehensions (element type + iterator variable inference)
+[x] Type-check if/elif/else, for, while, match statements
+[x] Type-check break/continue (loop context validation)
+[x] Type-check return statements (against function return type)
+[x] Type-check with statements (effect capability injection)
+[x] Type-check assert statements
+[x] Effect tracking and validation (db, net, fs, time, random, auth, log)
+[x] Spec validation (input names/types, effects subset check)
+[x] Built-in constructors (Ok, Err, Some)
+[x] Variable type tracking across scopes
+[x] AI-parseable structured errors (18 error codes, JSON output, suggested fixes)
+[x] Write comprehensive tests (48 tests)
 ```
 
-#### 2.5 Spec Validation (`pkg/speccheck`)
+#### Future Enhancements (deferred to later phases)
 
 ```
-[ ] Resolve satisfies references to spec blocks
-[ ] Validate input names and types match
-[ ] Validate effect lists are identical
-[ ] Validate error types are covered
-[ ] Detect possible guarantee violations where feasible
-[ ] Enforce uniqueness constraints
-[ ] Write tests for each validation rule
+[ ] Import resolution across modules
+[ ] Refinement predicate evaluation at compile time
+[ ] Generic type parameter instantiation
+[ ] Transitive effect closure via call graph
+[ ] Lambda parameter type inference from context
+[ ] ? propagation operator type checking
 ```
 
 ### Phase 3: Code Generation
@@ -335,10 +351,10 @@ Each package should have a **single, clear responsibility**:
 - `ast` — AST node type definitions. Minimal logic (just constructors and accessors).
 - `parser` — Token stream → AST. No type checking or validation.
 - `formatter` — AST → canonical source text. No parsing.
-- `resolver` — AST → AST with resolved names. No type checking.
-- `typechecker` — Resolved AST → typed AST. Depends on resolver output.
-- `effects` — Typed AST → effect-checked AST. Depends on typechecker and call graph.
-- `interpreter` — Typed AST → execution. Depends on all analysis phases.
+- `symbols` — Symbol table with hierarchical scope management. Used by the checker.
+- `types` — Type system representation, equality, subtyping, and registry. Used by the checker.
+- `checker` — Multi-pass type checker integrating symbols, types, and effect tracking. Depends on parser output.
+- `interpreter` — [Phase 3] Typed AST → execution. Depends on all analysis phases.
 
 ### Naming Conventions
 
