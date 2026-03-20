@@ -1283,3 +1283,215 @@ func TestRuntimeError(t *testing.T) {
                 t.Fatalf("unexpected error string: %q", err.Error())
         }
 }
+
+
+// --- Pipeline Operator Tests ---
+
+func TestPipelineBasic(t *testing.T) {
+        // Basic pipeline: value |> func
+        src := `
+fn double(x: Int) -> Int:
+    return x * 2
+
+fn test_pipeline() -> Int:
+    return 5 |> double
+`
+        result := runFunc(t, src, "test_pipeline", nil)
+        expectInt(t, result, 10)
+}
+
+func TestPipelineChained(t *testing.T) {
+        // Chained pipelines: data |> f1 |> f2 |> f3
+        src := `
+fn add_one(x: Int) -> Int:
+    return x + 1
+
+fn double(x: Int) -> Int:
+    return x * 2
+
+fn square(x: Int) -> Int:
+    return x * x
+
+fn test_chain() -> Int:
+    return 3 |> add_one |> double |> square
+`
+        // 3 -> add_one -> 4 -> double -> 8 -> square -> 64
+        result := runFunc(t, src, "test_chain", nil)
+        expectInt(t, result, 64)
+}
+
+func TestPipelineWithLambda(t *testing.T) {
+        // Pipeline with inline lambda
+        src := `
+fn test_pipe_lambda() -> Int:
+    return 10 |> |x| -> x + 5
+`
+        result := runFunc(t, src, "test_pipe_lambda", nil)
+        expectInt(t, result, 15)
+}
+
+func TestPipelineChainedWithLambdas(t *testing.T) {
+        // Chained pipeline with mix of functions and lambdas
+        src := `
+fn double(x: Int) -> Int:
+    return x * 2
+
+fn test_chain_lambdas() -> Int:
+    return 3 |> double |> |x| -> x + 10
+`
+        // 3 -> double -> 6 -> +10 -> 16
+        result := runFunc(t, src, "test_chain_lambdas", nil)
+        expectInt(t, result, 16)
+}
+
+func TestPipelineWithStrings(t *testing.T) {
+        // Pipeline with string operations
+        src := `
+fn exclaim(s: String) -> String:
+    return s + "!"
+
+fn greet(name: String) -> String:
+    return "Hello, " + name
+
+fn test_pipe_string() -> String:
+    return "World" |> greet |> exclaim
+`
+        // "World" -> greet -> "Hello, World" -> exclaim -> "Hello, World!"
+        result := runFunc(t, src, "test_pipe_string", nil)
+        expectString(t, result, "Hello, World!")
+}
+
+func TestPipelineWithFloat(t *testing.T) {
+        // Pipeline with float values
+        src := `
+fn halve(x: Float) -> Float:
+    return x / 2.0
+
+fn test_pipe_float() -> Float:
+    return 10.0 |> halve
+`
+        result := runFunc(t, src, "test_pipe_float", nil)
+        expectFloat(t, result, 5.0)
+}
+
+func TestPipelineWithBool(t *testing.T) {
+        // Pipeline returning bool
+        src := `
+fn is_positive(x: Int) -> Bool:
+    return x > 0
+
+fn test_pipe_bool() -> Bool:
+    return 42 |> is_positive
+`
+        result := runFunc(t, src, "test_pipe_bool", nil)
+        expectBool(t, result, true)
+}
+
+func TestPipelineInLetBinding(t *testing.T) {
+        // Pipeline result stored in variable
+        src := `
+fn double(x: Int) -> Int:
+    return x * 2
+
+fn triple(x: Int) -> Int:
+    return x * 3
+
+fn test_pipe_let() -> Int:
+    let a = 5 |> double
+    let b = a |> triple
+    return b
+`
+        // a = 10, b = 30
+        result := runFunc(t, src, "test_pipe_let", nil)
+        expectInt(t, result, 30)
+}
+
+func TestPipelinePrecedence(t *testing.T) {
+        // Pipeline has lower precedence than arithmetic
+        // So `2 + 3 |> double` means `(2 + 3) |> double`
+        src := `
+fn double(x: Int) -> Int:
+    return x * 2
+
+fn test_pipe_prec() -> Int:
+    return 2 + 3 |> double
+`
+        // (2 + 3) = 5 |> double = 10
+        result := runFunc(t, src, "test_pipe_prec", nil)
+        expectInt(t, result, 10)
+}
+
+func TestPipelineIdentity(t *testing.T) {
+        // Pipeline with identity lambda
+        src := `
+fn test_pipe_identity() -> Int:
+    return 42 |> |x| -> x
+`
+        result := runFunc(t, src, "test_pipe_identity", nil)
+        expectInt(t, result, 42)
+}
+
+func TestPipelineLongChain(t *testing.T) {
+        // Longer chain to verify left-associativity
+        src := `
+fn inc(x: Int) -> Int:
+    return x + 1
+
+fn test_long_chain() -> Int:
+    return 0 |> inc |> inc |> inc |> inc |> inc
+`
+        result := runFunc(t, src, "test_long_chain", nil)
+        expectInt(t, result, 5)
+}
+
+func TestPipelineWithNone(t *testing.T) {
+        // Pipeline that receives none and handles it
+        src := `
+fn to_string(x) -> String:
+    return str(x)
+
+fn test_pipe_none() -> String:
+    return none |> to_string
+`
+        result := runFunc(t, src, "test_pipe_none", nil)
+        expectString(t, result, "none")
+}
+
+func TestPipelineLexerToken(t *testing.T) {
+        // Verify the lexer correctly tokenizes |>
+        src := "5 |> double\n"
+        l := lexer.New(src, "test.aura")
+        tokens, errs := l.Tokenize()
+        if len(errs) > 0 {
+                t.Fatalf("lexer errors: %v", errs)
+        }
+
+        // Expected: INT_LIT("5"), PIPE_GT("|>"), IDENT("double"), NEWLINE, EOF
+        found := false
+        for _, tok := range tokens {
+                if tok.Literal == "|>" {
+                        found = true
+                        break
+                }
+        }
+        if !found {
+                t.Fatal("expected PIPE_GT token in lexer output")
+        }
+}
+
+func TestPipelineLexerPipeStillWorks(t *testing.T) {
+        // Verify that plain | still works (for lambda params, union types)
+        src := "|x| x + 1\n"
+        l := lexer.New(src, "test.aura")
+        tokens, errs := l.Tokenize()
+        if len(errs) > 0 {
+                t.Fatalf("lexer errors: %v", errs)
+        }
+
+        // Should have PIPE tokens, not PIPE_GT
+        for _, tok := range tokens {
+                if tok.Literal == "|>" {
+                        t.Fatal("plain | should not produce PIPE_GT")
+                }
+        }
+}

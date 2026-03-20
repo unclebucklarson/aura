@@ -230,6 +230,16 @@ The tree-walk interpreter is the **highest-impact next step** for the AI-first m
 - ✅ 14 built-in functions (print, len, str, int, float, range, type_of, abs, min, max, Ok, Err, Some, None)
 - ✅ **91 new tests** — all passing (211 total across all packages)
 
+### 3.2 Post-Phase-3 Feature Additions
+
+Features added to complete the interpreter's expression support:
+
+- [x] **String interpolation** — Fully implemented in lexer, parser, and interpreter. Strings with `{expr}` syntax are parsed and evaluated at runtime.
+- [x] **Pipeline operator (`|>`)** — Lexer tokenizes `|>` as `PIPE_GT`, parser handles pipeline expressions with correct precedence (lower than all other operators, higher than assignment), interpreter evaluates by calling the right-hand function with the left-hand value as argument. Supports chained pipelines and lambdas.
+- [x] **Option chaining (`?` operator)** — The existing `?` postfix operator provides sufficient option chaining support for propagating `Option` and `Result` types.
+
+**Tests:** 14 new pipeline operator tests added (225 total across all packages)
+
 ---
 
 ## Phase 4: Runtime & Standard Library
@@ -351,3 +361,4 @@ See [DEVELOPMENT.md](DEVELOPMENT.md) for setup instructions, architecture overvi
 | 2026-03-17 | v0.1 | Phase 1 complete; roadmap published |
 | 2026-03-17 | v0.2 | Phase 2 complete (type checker, 83 tests); Phase 3 (interpreter) selected as next |
 | 2026-03-17 | v0.3 | Phase 3 complete (tree-walk interpreter, 91 tests, 211 total); run/test/repl CLI |
+| 2026-03-19 | v0.3.1 | Pipeline operator (`\|>`), string interpolation, option chaining marked complete; 225 total tests |
