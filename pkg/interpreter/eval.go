@@ -83,6 +83,12 @@ func EvalExpr(expr ast.Expr, env *Environment) Value {
         case *ast.FieldAccess:
                 return evalFieldAccess(e, env)
 
+        case *ast.OptionalFieldAccess:
+                return evalOptionalFieldAccess(e, env)
+
+        case *ast.PipelineExpr:
+                return evalPipelineExpr(e, env)
+
         case *ast.IndexExpr:
                 return evalIndexExpr(e, env)
 
@@ -650,6 +656,51 @@ func evalStringMethod(e *ast.FieldAccess, s *StringVal, env *Environment) Value 
                 runtimePanic(e.Span, "String has no method '%s'", e.Field)
         }
         return &NoneVal{}
+}
+
+func evalOptionalFieldAccess(e *ast.OptionalFieldAccess, env *Environment) Value {
+        obj := EvalExpr(e.Object, env)
+
+        // Short-circuit on None/OptionVal(None)
+        switch v := obj.(type) {
+        case *NoneVal:
+                return &NoneVal{}
+        case *OptionVal:
+                if !v.IsSome {
+                        return &NoneVal{}
+                }
+                // Unwrap and access field on inner value
+                obj = v.Val
+        }
+
+        // Now access the field on the (possibly unwrapped) value
+        switch v := obj.(type) {
+        case *StructVal:
+                val, ok := v.Fields[e.Field]
+                if !ok {
+                        return &NoneVal{}
+                }
+                return val
+        case *MapVal:
+                key := &StringVal{Val: e.Field}
+                for i, k := range v.Keys {
+                        if Equal(k, key) {
+                                return v.Values[i]
+                        }
+                }
+                return &NoneVal{}
+        case *NoneVal:
+                return &NoneVal{}
+        default:
+                runtimePanic(e.Span, "cannot access field '%s' on value of type %s", e.Field, valueTypeNames[obj.Type()])
+        }
+        return &NoneVal{}
+}
+
+func evalPipelineExpr(e *ast.PipelineExpr, env *Environment) Value {
+        left := EvalExpr(e.Left, env)
+        right := EvalExpr(e.Right, env)
+        return callFunction(e.Span, right, []Value{left}, env)
 }
 
 func evalIndexExpr(e *ast.IndexExpr, env *Environment) Value {

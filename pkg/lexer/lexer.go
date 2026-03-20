@@ -338,9 +338,19 @@ func (l *Lexer) scanToken() {
         case '.':
                 l.emitAt(token.DOT, ".", pos)
         case '?':
-                l.emitAt(token.QUESTION, "?", pos)
+                if l.peek() == '.' {
+                        l.advance()
+                        l.emitAt(token.QUESTION_DOT, "?.", pos)
+                } else {
+                        l.emitAt(token.QUESTION, "?", pos)
+                }
         case '|':
-                l.emitAt(token.PIPE, "|", pos)
+                if l.peek() == '>' {
+                        l.advance()
+                        l.emitAt(token.PIPELINE, "|>", pos)
+                } else {
+                        l.emitAt(token.PIPE, "|", pos)
+                }
         case '&':
                 l.emitAt(token.AMP, "&", pos)
         default:

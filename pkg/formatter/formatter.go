@@ -759,6 +759,15 @@ func (f *Formatter) formatExpr(expr ast.Expr) {
                 f.formatExpr(e.Object)
                 f.write("." + e.Field)
 
+        case *ast.OptionalFieldAccess:
+                f.formatExpr(e.Object)
+                f.write("?." + e.Field)
+
+        case *ast.PipelineExpr:
+                f.formatExpr(e.Left)
+                f.write(" |> ")
+                f.formatExpr(e.Right)
+
         case *ast.IndexExpr:
                 f.formatExpr(e.Object)
                 f.write("[")
