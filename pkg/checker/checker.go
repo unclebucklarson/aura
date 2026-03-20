@@ -878,6 +878,14 @@ func (c *Checker) inferExpr(expr ast.Expr) *types.Type {
                 return c.inferLambda(e)
         case *ast.OptionPropagate:
                 return c.inferOptionPropagate(e)
+        case *ast.OptionalFieldAccess:
+                // Option chaining: result is always optional (could be None)
+                c.inferExpr(e.Object)
+                return types.BuiltinAny
+        case *ast.PipelineExpr:
+                // Pipeline: infer the return type of the right-hand function
+                c.inferExpr(e.Left)
+                return c.inferExpr(e.Right)
         default:
                 return types.BuiltinAny
         }
@@ -1470,6 +1478,10 @@ func (c *Checker) exprToString(expr ast.Expr) string {
                 return e.Op + " " + c.exprToString(e.Operand)
         case *ast.FieldAccess:
                 return c.exprToString(e.Object) + "." + e.Field
+        case *ast.OptionalFieldAccess:
+                return c.exprToString(e.Object) + "?." + e.Field
+        case *ast.PipelineExpr:
+                return c.exprToString(e.Left) + " |> " + c.exprToString(e.Right)
         default:
                 return "<expr>"
         }

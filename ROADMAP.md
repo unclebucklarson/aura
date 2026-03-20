@@ -186,7 +186,7 @@ The tree-walk interpreter is the **highest-impact next step** for the AI-first m
 - [x] Structured runtime error output (JSON for AI agents)
 - [x] Test block runner (`aura test <file>`)
 
-**Package:** `pkg/interpreter` — 91 tests ✅
+**Package:** `pkg/interpreter` — 112 tests ✅
 
 #### 3.1.5 CLI Integration
 - [x] `aura run <file>` — execute an Aura program
@@ -228,7 +228,10 @@ The tree-walk interpreter is the **highest-impact next step** for the AI-first m
 - ✅ CLI commands: `aura run`, `aura test`, `aura repl`
 - ✅ Full expression/statement evaluation (arithmetic, comparison, logic, control flow, structs, enums, match, closures, lambdas, list comprehensions)
 - ✅ 14 built-in functions (print, len, str, int, float, range, type_of, abs, min, max, Ok, Err, Some, None)
-- ✅ **91 new tests** — all passing (211 total across all packages)
+- ✅ **112 interpreter tests** — all passing (232 total across all packages)
+- ✅ String interpolation with full expression support
+- ✅ Pipeline operator (`|>`) evaluation
+- ✅ Option chaining (`?.`) with None short-circuiting
 
 ### 3.2 Post-Phase-3 Feature Additions
 
@@ -361,4 +364,4 @@ See [DEVELOPMENT.md](DEVELOPMENT.md) for setup instructions, architecture overvi
 | 2026-03-17 | v0.1 | Phase 1 complete; roadmap published |
 | 2026-03-17 | v0.2 | Phase 2 complete (type checker, 83 tests); Phase 3 (interpreter) selected as next |
 | 2026-03-17 | v0.3 | Phase 3 complete (tree-walk interpreter, 91 tests, 211 total); run/test/repl CLI |
-| 2026-03-19 | v0.3.1 | Pipeline operator (`\|>`), string interpolation, option chaining marked complete; 225 total tests |
+| 2026-03-19 | v0.3.1 | String interpolation, pipeline operator (`\|>`), option chaining (pipeline + interpolation + chaining tests, 232+ total) |

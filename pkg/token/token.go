@@ -49,12 +49,13 @@ const (
         COMMA    // ,
         DOT      // .
         QUESTION // ?
-        PIPE     // |
-        PIPE_GT  // |>
-        AMP      // &
-        BANG     // !
-        ARROW    // ->
-        HASH     // #
+        PIPE         // |
+        PIPE_GT      // |>
+        AMP          // &
+        BANG         // !
+        ARROW        // ->
+        QUESTION_DOT // ?.
+        HASH         // #
 
         // Keywords
         MODULE
@@ -149,12 +150,13 @@ var tokenNames = map[Type]string{
         COMMA:       ",",
         DOT:         ".",
         QUESTION:    "?",
-        PIPE:        "|",
-        PIPE_GT:     "|>",
-        AMP:         "&",
-        BANG:        "!",
-        ARROW:       "->",
-        HASH:        "#",
+        PIPE:         "|",
+        PIPE_GT:      "|>",
+        AMP:          "&",
+        BANG:         "!",
+        ARROW:        "->",
+        QUESTION_DOT: "?.",
+        HASH:         "#",
         MODULE:      "module",
         IMPORT:      "import",
         FROM:        "from",

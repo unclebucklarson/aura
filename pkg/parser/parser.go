@@ -6,6 +6,7 @@ import (
         "strings"
 
         "github.com/unclebucklarson/aura/pkg/ast"
+        "github.com/unclebucklarson/aura/pkg/lexer"
         "github.com/unclebucklarson/aura/pkg/token"
 )
 
@@ -1480,9 +1481,8 @@ func (p *Parser) parsePipelineExpr() ast.Expr {
         for p.check(token.PIPE_GT) {
                 p.advance()
                 right := p.parseOrExpr()
-                left = &ast.BinaryOp{
+                left = &ast.PipelineExpr{
                         Span:  token.Span{File: p.file, Start: left.GetSpan().Start, End: right.GetSpan().End},
-                        Op:    "|>",
                         Left:  left,
                         Right: right,
                 }
@@ -1623,7 +1623,16 @@ func (p *Parser) parsePostfix() ast.Expr {
         expr := p.parsePrimary()
 
         for {
-                if p.check(token.DOT) {
+                if p.check(token.QUESTION_DOT) {
+                        p.advance()
+                        field := p.current().Literal
+                        p.advance()
+                        expr = &ast.OptionalFieldAccess{
+                                Span:   token.Span{File: p.file, Start: expr.GetSpan().Start, End: p.current().Pos},
+                                Object: expr,
+                                Field:  field,
+                        }
+                } else if p.check(token.DOT) {
                         p.advance()
                         field := p.current().Literal
                         p.advance()
@@ -1722,7 +1731,7 @@ func (p *Parser) parsePrimary() ast.Expr {
                 sl := &ast.StringLiteral{Span: p.makeSpan(start), Value: tok.Literal}
                 // Check for string interpolation: parse {expr} parts
                 if strings.Contains(tok.Literal, "{") {
-                        sl.Parts = parseStringInterpolation(tok.Literal)
+                        sl.Parts = parseStringInterpolation(tok.Literal, p.file)
                 }
                 return sl
 
@@ -1975,9 +1984,8 @@ func (p *Parser) parseStructOrCallExpr(name string, start token.Position) ast.Ex
 }
 
 // parseStringInterpolation extracts parts from a string with {expr} interpolation.
-// For the MVP, we just store the raw string; full interpolation parsing would
-// re-lex the embedded expressions.
-func parseStringInterpolation(s string) []ast.StringPart {
+// It properly lexes and parses embedded expressions inside {braces}.
+func parseStringInterpolation(s string, file string) []ast.StringPart {
         var parts []ast.StringPart
         var current strings.Builder
         i := 0
@@ -1998,11 +2006,14 @@ func parseStringInterpolation(s string) []ast.StringPart {
                                 }
                                 j++
                         }
-                        exprStr := s[i+1 : j-1]
+                        exprStr := strings.TrimSpace(s[i+1 : j-1])
+
+                        // Parse the expression using the real lexer and parser
+                        expr := parseEmbeddedExpr(exprStr, file)
                         parts = append(parts, ast.StringPart{
                                 IsExpr: true,
                                 Text:   exprStr,
-                                Expr:   &ast.Identifier{Name: exprStr}, // simplified
+                                Expr:   expr,
                         })
                         i = j
                 } else {
@@ -2014,4 +2025,19 @@ func parseStringInterpolation(s string) []ast.StringPart {
                 parts = append(parts, ast.StringPart{Text: current.String()})
         }
         return parts
+}
+
+// parseEmbeddedExpr lexes and parses a single expression string.
+func parseEmbeddedExpr(exprStr string, file string) ast.Expr {
+        l := lexer.New(exprStr, file)
+        tokens, _ := l.Tokenize()
+        if len(tokens) == 0 {
+                return &ast.Identifier{Name: exprStr}
+        }
+        p := New(tokens, file)
+        expr := p.parseExpr()
+        if expr == nil {
+                return &ast.Identifier{Name: exprStr}
+        }
+        return expr
 }
