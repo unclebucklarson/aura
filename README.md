@@ -185,7 +185,7 @@ go test ./... -v
 - `pkg/symbols/` — 9 tests covering symbol table, scopes, and lookups
 - `pkg/types/` — 26 tests covering type system, equality, subtyping, and registry
 - `pkg/checker/` — 48 tests covering type checking, effects, specs, and error diagnostics
-- `pkg/interpreter/` — 91 tests covering values, environment, expressions, statements, control flow, builtins, structs, enums, match, closures, and test runner
+- `pkg/interpreter/` — 112 tests covering values, environment, expressions, statements, control flow, builtins, structs, enums, match, closures, test runner, string interpolation, pipeline operator, and option chaining
 
 ### Round-Trip Guarantee
 

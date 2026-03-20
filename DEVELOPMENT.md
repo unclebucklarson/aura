@@ -104,7 +104,7 @@ aura-toolchain/
 │       └── eval.go              # Expression/statement evaluator
 │       └── interpreter.go       # Module execution & builtins
 │       └── test.go              # Test runner
-│       └── interpreter_test.go  # 91 tests
+│       └── interpreter_test.go  # 112 tests
 ├── testdata/                    # Sample .aura files
 ├── user_docs/                   # User-facing documentation
 ├── ROADMAP.md                   # Development roadmap
@@ -273,7 +273,7 @@ go tool cover -html=coverage.out
 
 ### Phase 3: Tree-Walk Interpreter ✅ COMPLETE
 
-#### 3.1 Tree-Walk Interpreter (`pkg/interpreter`) — 91 tests
+#### 3.1 Tree-Walk Interpreter (`pkg/interpreter`) — 112 tests
 
 ```
 [x] Value system: IntVal, FloatVal, StringVal, BoolVal, NoneVal, ListVal, MapVal,
@@ -312,14 +312,18 @@ go tool cover -html=coverage.out
     Ok, Err, Some, None
 [x] Test block runner (RunTests, FormatTestResults)
 [x] CLI integration: run, test, repl commands
-[x] 91 comprehensive tests
+[x] 112 comprehensive tests
+```
+
+#### Recently Completed (v0.3.1)
+```
+[x] String interpolation with full expression support
+[x] Pipeline operator (|>) evaluation
+[x] Option chaining (?.) with None short-circuiting
 ```
 
 #### Deferred to future phases
 ```
-[ ] Pipeline operator evaluation
-[ ] Option chaining (?) propagation
-[ ] String interpolation
 [ ] Effect capability enforcement at runtime
 [ ] Import/module resolution
 ```
@@ -383,7 +387,7 @@ Each package should have a **single, clear responsibility**:
 - `symbols` — Symbol table with hierarchical scope management. Used by the checker.
 - `types` — Type system representation, equality, subtyping, and registry. Used by the checker.
 - `checker` — Multi-pass type checker integrating symbols, types, and effect tracking. Depends on parser output.
-- `interpreter` — Tree-walk interpreter. Evaluates AST directly: value system, environment/scope chain, expression/statement evaluation, builtins, test runner. Depends on `ast`, `token`, `lexer`, `parser`. 91 tests.
+- `interpreter` — Tree-walk interpreter. Evaluates AST directly: value system, environment/scope chain, expression/statement evaluation, builtins, test runner, string interpolation, pipeline operator, option chaining. Depends on `ast`, `token`, `lexer`, `parser`. 112 tests.
 
 ### Naming Conventions
 
