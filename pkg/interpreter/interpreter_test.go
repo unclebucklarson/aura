@@ -1283,3 +1283,264 @@ func TestRuntimeError(t *testing.T) {
                 t.Fatalf("unexpected error string: %q", err.Error())
         }
 }
+
+
+
+// ============================================================
+// --- String Interpolation Tests ---
+// ============================================================
+
+func TestStringInterpolation_SimpleVariable(t *testing.T) {
+        src := `module test
+fn greet() -> String:
+  let name = "World"
+  return "Hello, {name}!"
+`
+        result := runFunc(t, src, "greet", nil)
+        expectString(t, result, "Hello, World!")
+}
+
+func TestStringInterpolation_Expression(t *testing.T) {
+        src := `module test
+fn calc() -> String:
+  let x = 3
+  let y = 7
+  return "Result: {x + y}"
+`
+        result := runFunc(t, src, "calc", nil)
+        expectString(t, result, "Result: 10")
+}
+
+func TestStringInterpolation_FieldAccess(t *testing.T) {
+        src := `module test
+struct User:
+  name: String
+  age: Int
+
+fn info() -> String:
+  let u = User(name: "Alice", age: 30)
+  return "User: {u.name}"
+`
+        result := runFunc(t, src, "info", nil)
+        expectString(t, result, "User: Alice")
+}
+
+func TestStringInterpolation_MultipleInterpolations(t *testing.T) {
+        src := `module test
+fn multi() -> String:
+  let a = "foo"
+  let b = "bar"
+  let c = 42
+  return "{a} and {b} is {c}"
+`
+        result := runFunc(t, src, "multi", nil)
+        expectString(t, result, "foo and bar is 42")
+}
+
+func TestStringInterpolation_NestedExpression(t *testing.T) {
+        src := `module test
+fn nested() -> String:
+  let x = 10
+  let y = 3
+  return "calc: {x * y + 1}"
+`
+        result := runFunc(t, src, "nested", nil)
+        expectString(t, result, "calc: 31")
+}
+
+func TestStringInterpolation_BoolAndNone(t *testing.T) {
+        src := `module test
+fn show() -> String:
+  let flag = true
+  return "flag is {flag}"
+`
+        result := runFunc(t, src, "show", nil)
+        expectString(t, result, "flag is true")
+}
+
+func TestStringInterpolation_NoInterpolation(t *testing.T) {
+        src := `module test
+fn plain() -> String:
+  return "no interpolation here"
+`
+        result := runFunc(t, src, "plain", nil)
+        expectString(t, result, "no interpolation here")
+}
+
+// ============================================================
+// --- Pipeline Operator Tests ---
+// ============================================================
+
+func TestPipeline_SimpleFunction(t *testing.T) {
+        src := `module test
+fn double(x: Int) -> Int:
+  return x * 2
+
+fn get() -> Int:
+  return 5 |> double
+`
+        result := runFunc(t, src, "get", nil)
+        expectInt(t, result, 10)
+}
+
+func TestPipeline_MultiStage(t *testing.T) {
+        src := `module test
+fn double(x: Int) -> Int:
+  return x * 2
+
+fn add_one(x: Int) -> Int:
+  return x + 1
+
+fn get() -> Int:
+  return 3 |> double |> add_one
+`
+        result := runFunc(t, src, "get", nil)
+        expectInt(t, result, 7)
+}
+
+func TestPipeline_WithLambda(t *testing.T) {
+        src := `module test
+fn get() -> Int:
+  return 4 |> |x| -> x * x
+`
+        result := runFunc(t, src, "get", nil)
+        expectInt(t, result, 16)
+}
+
+func TestPipeline_WithBuiltinFunction(t *testing.T) {
+        src := `module test
+fn get() -> String:
+  return 42 |> str
+`
+        result := runFunc(t, src, "get", nil)
+        expectString(t, result, "42")
+}
+
+func TestPipeline_ChainedWithLambdas(t *testing.T) {
+        src := `module test
+fn get() -> Int:
+  return 2 |> |x| -> x + 3 |> |x| -> x * 10
+`
+        result := runFunc(t, src, "get", nil)
+        expectInt(t, result, 50)
+}
+
+func TestPipeline_WithStringFunction(t *testing.T) {
+        src := `module test
+fn exclaim(s: String) -> String:
+  return s + "!"
+
+fn get() -> String:
+  return "hello" |> exclaim
+`
+        result := runFunc(t, src, "get", nil)
+        expectString(t, result, "hello!")
+}
+
+func TestPipeline_NonFunctionError(t *testing.T) {
+        src := `module test
+fn get() -> Int:
+  return 5 |> 10
+`
+        expectRuntimeError(t, src, "get", "cannot call")
+}
+
+// ============================================================
+// --- Option Chaining Tests ---
+// ============================================================
+
+func TestOptionChaining_SuccessfulFieldAccess(t *testing.T) {
+        src := `module test
+struct User:
+  name: String
+  age: Int
+
+fn get() -> String:
+  let u = User(name: "Alice", age: 25)
+  return u?.name
+`
+        result := runFunc(t, src, "get", nil)
+        expectString(t, result, "Alice")
+}
+
+func TestOptionChaining_NoneShortCircuit(t *testing.T) {
+        src := `module test
+fn get() -> None:
+  let u = None
+  return u?.name
+`
+        result := runFunc(t, src, "get", nil)
+        expectNone(t, result)
+}
+
+func TestOptionChaining_NestedChaining(t *testing.T) {
+        src := `module test
+struct Address:
+  city: String
+
+struct User:
+  name: String
+  address: Address
+
+fn get() -> String:
+  let u = User(name: "Bob", address: Address(city: "NYC"))
+  return u?.address?.city
+`
+        result := runFunc(t, src, "get", nil)
+        expectString(t, result, "NYC")
+}
+
+func TestOptionChaining_SomeOptionUnwrap(t *testing.T) {
+        src := `module test
+struct User:
+  name: String
+
+fn get() -> String:
+  let u = Some(User(name: "Carol"))
+  return u?.name
+`
+        result := runFunc(t, src, "get", nil)
+        expectString(t, result, "Carol")
+}
+
+func TestOptionChaining_NoneOptionValue(t *testing.T) {
+        // None is an OptionVal{IsSome: false} — option chaining should short-circuit
+        src := `module test
+fn get() -> Bool:
+  let val = None
+  let result = val?.something
+  match result:
+    case None:
+      return true
+    case _:
+      return false
+`
+        result := runFunc(t, src, "get", nil)
+        expectBool(t, result, true)
+}
+
+func TestOptionChaining_MissingField(t *testing.T) {
+        src := `module test
+struct User:
+  name: String
+
+fn get() -> None:
+  let u = User(name: "Dave")
+  return u?.nonexistent
+`
+        result := runFunc(t, src, "get", nil)
+        expectNone(t, result)
+}
+
+func TestOptionChaining_NestedNoneMiddle(t *testing.T) {
+        src := `module test
+struct Address:
+  city: String
+
+fn get() -> None:
+  let u = None
+  return u?.address?.city
+`
+        result := runFunc(t, src, "get", nil)
+        expectNone(t, result)
+}
