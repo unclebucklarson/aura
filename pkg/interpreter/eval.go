@@ -547,116 +547,29 @@ func evalFieldAccess(e *ast.FieldAccess, env *Environment) Value {
                 }
                 return val
         case *MapVal:
+                // Map field access (dot notation for string keys)
                 key := &StringVal{Val: e.Field}
                 for i, k := range v.Keys {
                         if Equal(k, key) {
                                 return v.Values[i]
                         }
                 }
+                // Fall through to method registry for map methods
+                if m := resolveMethod(obj, e.Field); m != nil {
+                        return m
+                }
                 return &NoneVal{}
-        case *ListVal:
-                return evalListMethod(e, v, env)
-        case *StringVal:
-                return evalStringMethod(e, v, env)
         default:
+                // Use the method registry for all other types
+                if m := resolveMethod(obj, e.Field); m != nil {
+                        return m
+                }
                 runtimePanic(e.Span, "cannot access field '%s' on value of type %s", e.Field, valueTypeNames[obj.Type()])
         }
         return &NoneVal{}
 }
 
-func evalListMethod(e *ast.FieldAccess, list *ListVal, env *Environment) Value {
-        switch e.Field {
-        case "len", "length":
-                return &BuiltinFnVal{
-                        Name: "List.len",
-                        Fn:   func(args []Value) Value { return &IntVal{Val: int64(len(list.Elements))} },
-                }
-        case "append":
-                return &BuiltinFnVal{
-                        Name: "List.append",
-                        Fn: func(args []Value) Value {
-                                if len(args) < 1 {
-                                        runtimePanic(e.Span, "append requires at least one argument")
-                                }
-                                list.Elements = append(list.Elements, args[0])
-                                return &NoneVal{}
-                        },
-                }
-        case "contains":
-                return &BuiltinFnVal{
-                        Name: "List.contains",
-                        Fn: func(args []Value) Value {
-                                if len(args) < 1 {
-                                        return &BoolVal{Val: false}
-                                }
-                                for _, elem := range list.Elements {
-                                        if Equal(elem, args[0]) {
-                                                return &BoolVal{Val: true}
-                                        }
-                                }
-                                return &BoolVal{Val: false}
-                        },
-                }
-        default:
-                runtimePanic(e.Span, "List has no method '%s'", e.Field)
-        }
-        return &NoneVal{}
-}
 
-func evalStringMethod(e *ast.FieldAccess, s *StringVal, env *Environment) Value {
-        switch e.Field {
-        case "len", "length":
-                return &BuiltinFnVal{
-                        Name: "String.len",
-                        Fn:   func(args []Value) Value { return &IntVal{Val: int64(len(s.Val))} },
-                }
-        case "upper":
-                return &BuiltinFnVal{
-                        Name: "String.upper",
-                        Fn:   func(args []Value) Value { return &StringVal{Val: strings.ToUpper(s.Val)} },
-                }
-        case "lower":
-                return &BuiltinFnVal{
-                        Name: "String.lower",
-                        Fn:   func(args []Value) Value { return &StringVal{Val: strings.ToLower(s.Val)} },
-                }
-        case "contains":
-                return &BuiltinFnVal{
-                        Name: "String.contains",
-                        Fn: func(args []Value) Value {
-                                if len(args) < 1 {
-                                        return &BoolVal{Val: false}
-                                }
-                                sub, ok := args[0].(*StringVal)
-                                if !ok {
-                                        runtimePanic(e.Span, "String.contains requires a string argument")
-                                }
-                                return &BoolVal{Val: strings.Contains(s.Val, sub.Val)}
-                        },
-                }
-        case "split":
-                return &BuiltinFnVal{
-                        Name: "String.split",
-                        Fn: func(args []Value) Value {
-                                sep := " "
-                                if len(args) > 0 {
-                                        if sv, ok := args[0].(*StringVal); ok {
-                                                sep = sv.Val
-                                        }
-                                }
-                                parts := strings.Split(s.Val, sep)
-                                elems := make([]Value, len(parts))
-                                for i, p := range parts {
-                                        elems[i] = &StringVal{Val: p}
-                                }
-                                return &ListVal{Elements: elems}
-                        },
-                }
-        default:
-                runtimePanic(e.Span, "String has no method '%s'", e.Field)
-        }
-        return &NoneVal{}
-}
 
 func evalOptionalFieldAccess(e *ast.OptionalFieldAccess, env *Environment) Value {
         obj := EvalExpr(e.Object, env)
