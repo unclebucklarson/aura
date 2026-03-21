@@ -1,4 +1,4 @@
-# AI Next Session Context — Phase 4.1 Chunk 2
+# AI Next Session Context — Phase 4.1 Chunk 3
 
 > **Purpose:** This file provides complete context for any AI agent (or human developer) to pick up exactly where we left off. Read this before starting any work.
 >
@@ -16,19 +16,18 @@
 | Phase 1 | Lexer, Parser, AST, Formatter, CLI | ✅ Complete |
 | Phase 2 | Type Checker, Symbol Table, Semantic Analysis | ✅ Complete |
 | Phase 3 | Tree-walk Interpreter | ✅ Complete |
-| Phase 3+ | String Interpolation, Pipeline Operator (`\|>`), Option Chaining (`?.`) | ✅ Complete |
-| Phase 4.1 Chunk 1 | Method Dispatch Infrastructure + String Methods | ✅ Complete |
+| Phase 3+ | String Interpolation, Pipeline Operator (`|>`), Option Chaining (`?.`) | ✅ Complete |
+| Phase 4.1 Chunk 1 | Method Dispatch Infrastructure + String Methods (22 methods) | ✅ Complete |
+| Phase 4.1 Chunk 2 | List Methods (27 methods) | ✅ Complete |
 
-- **Test count:** 286 test functions passing (166 interpreter, 11 lexer, 16 parser, plus checker/symbols/types/formatter)
-- **Language version:** Pre-1.0, Phase 4.1 Chunk 1 complete
+- **Test count:** 338 test functions passing (218 interpreter, 11 lexer, 16 parser, plus checker/symbols/types/formatter)
+- **Language version:** Pre-1.0, Phase 4.1 Chunk 2 complete
 - **Repository:** `github.com/unclebucklarson/aura`
 - **Branch:** `main`
 
-### What Exists Today for Method Calls
+### Method Registry Summary
 
-The method dispatch system has been **refactored** from ad-hoc inline switch statements to a clean, extensible **registry architecture** in `pkg/interpreter/methods.go`.
-
-**Architecture:**
+**Architecture** (in `pkg/interpreter/methods.go`):
 - `MethodFunc` type: `func(receiver Value, args []Value) Value`
 - `methodRegistry` map: `map[ValueType]map[string]MethodFunc{}`
 - `RegisterMethod(vt, name, fn)` — registers a method
@@ -36,11 +35,15 @@ The method dispatch system has been **refactored** from ad-hoc inline switch sta
 - `resolveMethod(obj, name)` — returns a `BuiltinFnVal` closure for a method
 - Methods are registered via `init()` functions in type-specific files
 
-**Existing String methods (22 methods in `methods_string.go`):**
+**String methods (22 methods in `methods_string.go`):**
 `len`, `length`, `upper`, `to_upper`, `lower`, `to_lower`, `contains`, `split`, `trim`, `trim_left`, `trim_right`, `starts_with`, `ends_with`, `replace`, `replace_first`, `slice`, `index_of`, `chars`, `join`, `repeat`, `is_empty`, `reverse`, `pad_left`, `pad_right`
 
-**Existing List methods (4 methods in `methods_list.go`):**
-`len`, `length`, `append`, `contains`
+**List methods (27 methods in `methods_list.go`):**
+`len`, `length`, `append`, `push`, `contains`, `is_empty`, `first`, `last`, `get`, `pop`, `remove`, `reverse`, `slice`, `join`, `index_of`, `map`, `filter`, `reduce`, `for_each`, `flat_map`, `flatten`, `any`, `all`, `count`, `unique`, `sum`, `min`, `max`, `sort`, `zip`, `enumerate`
+
+**Helper functions added in Chunk 2:**
+- `callValue(fn Value, args []Value) Value` — invokes any callable (FunctionVal, LambdaVal, BuiltinFnVal) from method implementations
+- `cmpValues(a, b Value) int` — compares two values for ordering without requiring an AST node
 
 **Existing Map methods:** None (Maps exist as `MapVal` but have no methods yet)
 **Existing Option/Result methods:** None (constructors `Some`, `Ok`, `Err` exist as builtins)
@@ -49,96 +52,77 @@ The method dispatch system has been **refactored** from ad-hoc inline switch sta
 
 ## What We Just Did (Session Ending 2026-03-20)
 
-1. **Created method dispatch infrastructure** (`pkg/interpreter/methods.go`):
-   - Registry map pattern with `RegisterMethod`, `LookupMethod`, `resolveMethod`
-   - Clean separation: each type's methods in its own file
+1. **Implemented 27 list methods** in `pkg/interpreter/methods_list.go`:
+   - Basic: `len`, `length`, `append`, `push`, `contains`, `is_empty`
+   - Access: `first`, `last`, `get` (returns Option), `pop` (mutating, returns Option), `remove` (mutating)
+   - Transform: `reverse`, `slice` (with negative index support), `join`, `index_of` (returns Option)
+   - Higher-order: `map`, `filter`, `reduce`, `for_each`, `flat_map`, `flatten`
+   - Predicates: `any`, `all`, `count` (optional predicate)
+   - Utilities: `unique`, `sum`, `min` (returns Option), `max` (returns Option), `sort`
+   - Pairing: `zip`, `enumerate`
 
-2. **Migrated existing methods to the registry:**
-   - 5 string methods (len/length, upper, lower, contains, split) → `methods_string.go`
-   - 3 list methods (len/length, append, contains) → `methods_list.go`
-   - Removed old `evalStringMethod()` and `evalListMethod()` from `eval.go`
+2. **Created `callValue` helper** for invoking Aura callables from Go method implementations
 
-3. **Implemented 17 new string methods:**
-   - `to_upper`, `to_lower` (aliases)
-   - `trim`, `trim_left`, `trim_right`
-   - `starts_with`, `ends_with`
-   - `replace`, `replace_first`
-   - `slice` (with negative index support and bounds checking)
-   - `index_of` (returns `Option[Int]` — `Some(i)` or `None`)
-   - `chars`, `join`, `repeat`
-   - `is_empty`, `reverse`
-   - `pad_left`, `pad_right` (with optional pad character)
+3. **Created `cmpValues` helper** for comparing values in sort/min/max without AST dependency
 
-4. **Wrote 40 new test functions** in `pkg/interpreter/methods_test.go`:
-   - Registry tests, individual method tests, edge cases, chaining, error handling
-   - All 286 tests pass (246 existing + 40 new, zero regressions)
-
-5. **Refactored `eval.go` FieldAccess** to use registry-based dispatch for all types
+4. **Wrote 52 new test functions** in `pkg/interpreter/methods_test.go`:
+   - Individual method tests for all 27 list methods
+   - Lambda and function reference tests
+   - Method chaining tests (filter→map→sum, sort→map→join, filter→map→reduce)
+   - Edge cases: empty lists, single elements, out-of-bounds, negative indices
+   - Mutation tests: push/pop/remove mutate, reverse/sort do NOT mutate
+   - All 338 tests pass (286 existing + 52 new, zero regressions)
 
 ---
 
-## Next Task: Phase 4.1 Chunk 2 — List Methods
+## Next Task: Phase 4.1 Chunk 3 — Map Methods
 
 ### Goal
 
-Extend the method registry with comprehensive list methods, building on the same architecture established in Chunk 1.
+Extend the method registry with comprehensive map methods, building on the same architecture.
 
-### List Methods to Implement in `pkg/interpreter/methods_list.go`
+### Map Methods to Implement in `pkg/interpreter/methods_map.go`
 
 | Method | Signature | Description | Notes |
 |--------|-----------|-------------|-------|
-| `map(fn)` | `(Fn) -> List` | Apply function to each element | Must handle FunctionVal, LambdaVal, BuiltinFnVal |
-| `filter(fn)` | `(Fn) -> List` | Keep elements where fn returns true | Same callable handling |
-| `reduce(fn, init)` | `(Fn, T) -> T` | Fold list with accumulator | |
-| `for_each(fn)` | `(Fn) -> None` | Execute fn for each element (side effects) | |
-| `sort()` | `() -> List` | Sort list (new list, non-mutating) | Numeric and string comparison |
-| `reverse()` | `() -> List` | Reverse list (new list) | |
-| `flat_map(fn)` | `(Fn) -> List` | Map + flatten one level | |
-| `flatten()` | `() -> List` | Flatten one level of nesting | |
-| `slice(start, end?)` | `(Int, Int?) -> List` | Get sub-list with bounds checking | Like string slice |
-| `get(index)` | `(Int) -> Option[T]` | Safe index access, returns Option | |
-| `first()` | `() -> Option[T]` | Get first element | |
-| `last()` | `() -> Option[T]` | Get last element | |
-| `pop()` | `() -> Option[T]` | Remove and return last element (mutating) | |
-| `push(item)` | `(T) -> None` | Alias for append (mutating) | |
-| `remove(index)` | `(Int) -> T` | Remove element at index (mutating) | |
-| `index_of(item)` | `(T) -> Option[Int]` | Find index of first matching element | |
-| `join(sep)` | `(String) -> String` | Join elements into string | |
-| `is_empty()` | `() -> Bool` | Check if list is empty | |
-| `zip(other)` | `(List) -> List[Tuple]` | Zip two lists | |
-| `enumerate()` | `() -> List[Tuple]` | List of (index, element) tuples | |
-| `any(fn)` | `(Fn) -> Bool` | True if any element satisfies predicate | |
-| `all(fn)` | `(Fn) -> Bool` | True if all elements satisfy predicate | |
-| `count(fn?)` | `(Fn?) -> Int` | Count elements (optionally matching predicate) | |
-| `unique()` | `() -> List` | Remove duplicates | |
-| `sum()` | `() -> Int\|Float` | Sum numeric elements | |
-| `min()` | `() -> Option[T]` | Find minimum element | |
-| `max()` | `() -> Option[T]` | Find maximum element | |
+| `len()` | `() -> Int` | Number of key-value pairs | |
+| `length()` | `() -> Int` | Alias for len | |
+| `is_empty()` | `() -> Bool` | Check if map is empty | |
+| `get(key)` | `(K) -> Option[V]` | Safe key access, returns Option | |
+| `set(key, val)` | `(K, V) -> None` | Set key-value pair (mutating) | |
+| `delete(key)` | `(K) -> Bool` | Delete key, return whether existed | |
+| `contains_key(key)` | `(K) -> Bool` | Check if key exists | |
+| `contains_value(val)` | `(V) -> Bool` | Check if value exists | |
+| `keys()` | `() -> List[K]` | Get list of all keys | |
+| `values()` | `() -> List[V]` | Get list of all values | |
+| `entries()` | `() -> List[Tuple(K,V)]` | Get list of (key, value) tuples | |
+| `merge(other)` | `(Map) -> Map` | Merge with another map (returns new) | |
+| `map(fn)` | `(Fn(K,V) -> V) -> Map` | Transform values | |
+| `filter(fn)` | `(Fn(K,V) -> Bool) -> Map` | Filter entries by predicate | |
+| `for_each(fn)` | `(Fn(K,V)) -> None` | Execute fn for each entry | |
 
-### Key Implementation Challenge: Calling Aura Functions from Go
+### Key Implementation Notes
 
-List methods like `map`, `filter`, `reduce` need to call Aura functions (lambdas, closures, builtins). The pattern for this already exists in `callFunction()` in `eval.go`. You'll need to create a helper:
-
-```go
-// callValue calls a callable value (FunctionVal, LambdaVal, BuiltinFnVal) with args.
-func callValue(fn Value, args []Value) Value {
-    switch f := fn.(type) {
-    case *BuiltinFnVal:
-        return f.Fn(args)
-    case *FunctionVal:
-        // Create new env, bind params, execute body
-    case *LambdaVal:
-        // Create new env, bind params, evaluate expression or block
-    default:
-        panic(&RuntimeError{Message: "value is not callable"})
-    }
-}
-```
+- `MapVal` uses parallel `Keys []Value` and `Values []Value` slices (insertion-ordered)
+- Use `Equal()` for key comparison (already exists in `value.go`)
+- Follow the same `RegisterMethod(TypeMap, ...)` pattern
+- Create `methods_map.go` with `init()` → `registerMapMethods()`
 
 ### Testing Target
 
-- 25-30 new test functions for list methods
-- Target total: ~315+ tests
+- 15-20 new test functions for map methods
+- Target total: ~355+ tests
+
+---
+
+## What Comes After (Chunks 4+)
+
+| Chunk | Scope | Depends On |
+|-------|-------|------------|
+| **Chunk 3:** Map Methods | `get`, `set`, `delete`, `keys`, `values`, `entries`, `contains_key`, `merge`, `map`, `filter` + tests | Chunk 1 (uses same registry) |
+| **Chunk 4:** Option/Result Methods | `unwrap`, `unwrap_or`, `map`, `flat_map`, `is_some`, `is_none`, `is_ok`, `is_err`, `or_else` + tests | Chunk 1 |
+
+After all 4 chunks → Phase 4.1 complete → move to Import System (Priority 2).
 
 ---
 
@@ -155,58 +139,42 @@ RegisterMethod(TypeList, "map", func(receiver Value, args []Value) Value {
 })
 ```
 
-**FieldAccess dispatch** in `eval.go` now uses:
+**Calling Aura functions from Go** (established in Chunk 2):
 ```go
-// Use the method registry for all other types
+// callValue invokes any callable (FunctionVal, LambdaVal, BuiltinFnVal)
+result := callValue(fn, []Value{element})
+```
+
+**FieldAccess dispatch** in `eval.go`:
+```go
 if m := resolveMethod(obj, e.Field); m != nil {
     return m
 }
 ```
 
-**Runtime errors** in method implementations use:
+**Runtime errors** in method implementations:
 ```go
 panic(&RuntimeError{Message: "error message"})
 ```
 
-### Files Created in Chunk 1
+### Files Created/Modified
 
 | File | Description |
 |------|-------------|
 | `pkg/interpreter/methods.go` | Method registry infrastructure |
 | `pkg/interpreter/methods_string.go` | 22 string methods |
-| `pkg/interpreter/methods_list.go` | 4 list methods (to be extended in Chunk 2) |
-| `pkg/interpreter/methods_test.go` | 40 test functions for registry + string methods |
+| `pkg/interpreter/methods_list.go` | 27 list methods + `callValue` + `cmpValues` helpers |
+| `pkg/interpreter/methods_test.go` | 92 test functions (40 string + 52 list) |
 
 ### Running Tests
 
 ```bash
 cd /path/to/aura
 go test ./pkg/interpreter/ -v          # interpreter tests only
-go test ./...                           # all tests (286 passing)
-go test ./pkg/interpreter/ -run TestList  # list method tests
+go test ./...                           # all tests (338 passing)
+go test ./pkg/interpreter/ -run TestList  # list method tests only
+go test ./pkg/interpreter/ -run TestMap   # map method tests (Chunk 3)
 ```
-
----
-
-## Success Criteria for Chunk 2
-
-- [ ] 25+ new list methods implemented in `methods_list.go`
-- [ ] `callValue` helper created for invoking Aura callables from method implementations
-- [ ] All 286 existing tests still pass (zero regressions)
-- [ ] 25-30 new test functions for list methods
-- [ ] Total test count: ~315+
-- [ ] Code is clean, documented, and follows existing patterns
-
----
-
-## What Comes After (Chunks 3-4)
-
-| Chunk | Scope | Depends On |
-|-------|-------|------------|
-| **Chunk 3:** Map Methods | `get`, `set`, `delete`, `keys`, `values`, `entries`, `contains_key`, `len`, `merge`, `map`, `filter` + tests | Chunk 1 (uses same registry) |
-| **Chunk 4:** Option/Result Methods | `unwrap`, `unwrap_or`, `map`, `flat_map`, `is_some`, `is_none`, `is_ok`, `is_err`, `or_else` + tests | Chunk 1 |
-
-After all 4 chunks → Phase 4.1 complete → move to Import System (Priority 2).
 
 ---
 

@@ -452,3 +452,710 @@ fn test() -> String:
 `
         expectRuntimeError(t, src, "test", "cannot access field 'nonexistent_method'")
 }
+
+
+// =============================================================================
+// List Method Tests
+// =============================================================================
+
+func TestListLen(t *testing.T) {
+        src := `
+fn test() -> Int:
+    let xs = [1, 2, 3]
+    return xs.len()
+`
+        expectInt(t, runFunc(t, src, "test", nil), 3)
+}
+
+func TestListLenEmpty(t *testing.T) {
+        src := `
+fn test() -> Int:
+    let xs = []
+    return xs.len()
+`
+        expectInt(t, runFunc(t, src, "test", nil), 0)
+}
+
+func TestListIsEmpty(t *testing.T) {
+        src := `
+fn test_empty() -> Bool:
+    return [].is_empty()
+
+fn test_not_empty() -> Bool:
+    return [1].is_empty()
+`
+        expectBool(t, runFunc(t, src, "test_empty", nil), true)
+        expectBool(t, runFunc(t, src, "test_not_empty", nil), false)
+}
+
+func TestListContains(t *testing.T) {
+        src := `
+fn test_yes() -> Bool:
+    return [1, 2, 3].contains(2)
+
+fn test_no() -> Bool:
+    return [1, 2, 3].contains(5)
+`
+        expectBool(t, runFunc(t, src, "test_yes", nil), true)
+        expectBool(t, runFunc(t, src, "test_no", nil), false)
+}
+
+func TestListFirst(t *testing.T) {
+        src := `
+fn test() -> Int:
+    let xs = [10, 20, 30]
+    match xs.first():
+        case Some(v):
+            return v
+        case _:
+            return -1
+
+fn test_empty() -> Int:
+    let xs = []
+    match xs.first():
+        case Some(v):
+            return v
+        case _:
+            return -1
+`
+        expectInt(t, runFunc(t, src, "test", nil), 10)
+        expectInt(t, runFunc(t, src, "test_empty", nil), -1)
+}
+
+func TestListLast(t *testing.T) {
+        src := `
+fn test() -> Int:
+    let xs = [10, 20, 30]
+    match xs.last():
+        case Some(v):
+            return v
+        case _:
+            return -1
+
+fn test_empty() -> Int:
+    match [].last():
+        case Some(v):
+            return v
+        case _:
+            return -1
+`
+        expectInt(t, runFunc(t, src, "test", nil), 30)
+        expectInt(t, runFunc(t, src, "test_empty", nil), -1)
+}
+
+func TestListGet(t *testing.T) {
+        src := `
+fn test_valid() -> Int:
+    let xs = [10, 20, 30]
+    match xs.get(1):
+        case Some(v):
+            return v
+        case _:
+            return -1
+
+fn test_negative() -> Int:
+    let xs = [10, 20, 30]
+    match xs.get(-1):
+        case Some(v):
+            return v
+        case _:
+            return -1
+
+fn test_oob() -> Int:
+    let xs = [10, 20, 30]
+    match xs.get(5):
+        case Some(v):
+            return v
+        case _:
+            return -1
+`
+        expectInt(t, runFunc(t, src, "test_valid", nil), 20)
+        expectInt(t, runFunc(t, src, "test_negative", nil), 30)
+        expectInt(t, runFunc(t, src, "test_oob", nil), -1)
+}
+
+func TestListPush(t *testing.T) {
+        src := `
+fn test() -> Int:
+    let xs = [1, 2]
+    xs.push(3)
+    return xs.len()
+`
+        expectInt(t, runFunc(t, src, "test", nil), 3)
+}
+
+func TestListPop(t *testing.T) {
+        src := `
+fn test() -> Int:
+    let xs = [1, 2, 3]
+    match xs.pop():
+        case Some(v):
+            return v
+        case _:
+            return -1
+
+fn test_empty() -> Int:
+    let xs = []
+    match xs.pop():
+        case Some(v):
+            return v
+        case _:
+            return -1
+
+fn test_mutates() -> Int:
+    let xs = [10, 20, 30]
+    xs.pop()
+    return xs.len()
+`
+        expectInt(t, runFunc(t, src, "test", nil), 3)
+        expectInt(t, runFunc(t, src, "test_empty", nil), -1)
+        expectInt(t, runFunc(t, src, "test_mutates", nil), 2)
+}
+
+func TestListRemove(t *testing.T) {
+        src := `
+fn test() -> Int:
+    let xs = [10, 20, 30]
+    let removed = xs.remove(1)
+    return removed
+
+fn test_length() -> Int:
+    let xs = [10, 20, 30]
+    xs.remove(0)
+    return xs.len()
+`
+        expectInt(t, runFunc(t, src, "test", nil), 20)
+        expectInt(t, runFunc(t, src, "test_length", nil), 2)
+}
+
+func TestListReverse(t *testing.T) {
+        src := `
+fn test() -> List:
+    return [1, 2, 3].reverse()
+`
+        result := runFunc(t, src, "test", nil)
+        list := result.(*ListVal)
+        if len(list.Elements) != 3 {
+                t.Fatalf("expected 3 elements, got %d", len(list.Elements))
+        }
+        expectInt(t, list.Elements[0], 3)
+        expectInt(t, list.Elements[1], 2)
+        expectInt(t, list.Elements[2], 1)
+}
+
+func TestListReverseEmpty(t *testing.T) {
+        src := `
+fn test() -> List:
+    return [].reverse()
+`
+        result := runFunc(t, src, "test", nil)
+        list := result.(*ListVal)
+        if len(list.Elements) != 0 {
+                t.Fatalf("expected 0 elements, got %d", len(list.Elements))
+        }
+}
+
+func TestListSlice(t *testing.T) {
+        src := `
+fn test_basic() -> Int:
+    let xs = [10, 20, 30, 40, 50]
+    let s = xs.slice(1, 4)
+    return s.len()
+
+fn test_first() -> Int:
+    let xs = [10, 20, 30, 40, 50]
+    let s = xs.slice(1, 4)
+    let opt = s.get(0)
+    match opt:
+        case Some(v):
+            return v
+        case _:
+            return -1
+`
+        expectInt(t, runFunc(t, src, "test_basic", nil), 3)
+        expectInt(t, runFunc(t, src, "test_first", nil), 20)
+}
+
+func TestListSliceNegative(t *testing.T) {
+        src := `
+fn test() -> Int:
+    let xs = [10, 20, 30, 40, 50]
+    let s = xs.slice(-2)
+    return s.len()
+`
+        expectInt(t, runFunc(t, src, "test", nil), 2)
+}
+
+func TestListSliceNoEnd(t *testing.T) {
+        src := `
+fn test() -> Int:
+    let xs = [10, 20, 30, 40, 50]
+    let s = xs.slice(2)
+    return s.len()
+`
+        expectInt(t, runFunc(t, src, "test", nil), 3)
+}
+
+func TestListJoin(t *testing.T) {
+        src := `
+fn test() -> String:
+    return ["a", "b", "c"].join(", ")
+
+fn test_empty() -> String:
+    return [].join(", ")
+
+fn test_single() -> String:
+    return ["hello"].join(", ")
+`
+        expectString(t, runFunc(t, src, "test", nil), "a, b, c")
+        expectString(t, runFunc(t, src, "test_empty", nil), "")
+        expectString(t, runFunc(t, src, "test_single", nil), "hello")
+}
+
+func TestListJoinInts(t *testing.T) {
+        src := `
+fn test() -> String:
+    return [1, 2, 3].join("-")
+`
+        expectString(t, runFunc(t, src, "test", nil), "1-2-3")
+}
+
+func TestListIndexOf(t *testing.T) {
+        src := `
+fn test_found() -> Int:
+    let xs = [10, 20, 30]
+    match xs.index_of(20):
+        case Some(i):
+            return i
+        case _:
+            return -1
+
+fn test_not_found() -> Int:
+    match [10, 20, 30].index_of(99):
+        case Some(i):
+            return i
+        case _:
+            return -1
+`
+        expectInt(t, runFunc(t, src, "test_found", nil), 1)
+        expectInt(t, runFunc(t, src, "test_not_found", nil), -1)
+}
+
+func TestListMap(t *testing.T) {
+        src := `
+fn double(x: Int) -> Int:
+    return x * 2
+
+fn test() -> List:
+    return [1, 2, 3].map(double)
+`
+        result := runFunc(t, src, "test", nil)
+        list := result.(*ListVal)
+        if len(list.Elements) != 3 {
+                t.Fatalf("expected 3 elements, got %d", len(list.Elements))
+        }
+        expectInt(t, list.Elements[0], 2)
+        expectInt(t, list.Elements[1], 4)
+        expectInt(t, list.Elements[2], 6)
+}
+
+func TestListMapLambda(t *testing.T) {
+        src := `
+fn test() -> List:
+    return [1, 2, 3].map(|x| -> x * 10)
+`
+        result := runFunc(t, src, "test", nil)
+        list := result.(*ListVal)
+        expectInt(t, list.Elements[0], 10)
+        expectInt(t, list.Elements[1], 20)
+        expectInt(t, list.Elements[2], 30)
+}
+
+func TestListMapEmpty(t *testing.T) {
+        src := `
+fn test() -> Int:
+    let result = [].map(|x| -> x * 2)
+    return result.len()
+`
+        expectInt(t, runFunc(t, src, "test", nil), 0)
+}
+
+func TestListFilter(t *testing.T) {
+        src := `
+fn is_even(x: Int) -> Bool:
+    return x % 2 == 0
+
+fn test() -> List:
+    return [1, 2, 3, 4, 5, 6].filter(is_even)
+`
+        result := runFunc(t, src, "test", nil)
+        list := result.(*ListVal)
+        if len(list.Elements) != 3 {
+                t.Fatalf("expected 3 elements, got %d", len(list.Elements))
+        }
+        expectInt(t, list.Elements[0], 2)
+        expectInt(t, list.Elements[1], 4)
+        expectInt(t, list.Elements[2], 6)
+}
+
+func TestListFilterLambda(t *testing.T) {
+        src := `
+fn test() -> List:
+    return [1, 2, 3, 4, 5].filter(|x| -> x > 3)
+`
+        result := runFunc(t, src, "test", nil)
+        list := result.(*ListVal)
+        if len(list.Elements) != 2 {
+                t.Fatalf("expected 2 elements, got %d", len(list.Elements))
+        }
+        expectInt(t, list.Elements[0], 4)
+        expectInt(t, list.Elements[1], 5)
+}
+
+func TestListFilterEmpty(t *testing.T) {
+        src := `
+fn test() -> Int:
+    let result = [1, 2, 3].filter(|x| -> x > 100)
+    return result.len()
+`
+        expectInt(t, runFunc(t, src, "test", nil), 0)
+}
+
+func TestListReduce(t *testing.T) {
+        src := `
+fn test() -> Int:
+    return [1, 2, 3, 4].reduce(0, |acc, x| -> acc + x)
+`
+        expectInt(t, runFunc(t, src, "test", nil), 10)
+}
+
+func TestListReduceProduct(t *testing.T) {
+        src := `
+fn test() -> Int:
+    return [1, 2, 3, 4].reduce(1, |acc, x| -> acc * x)
+`
+        expectInt(t, runFunc(t, src, "test", nil), 24)
+}
+
+func TestListReduceEmpty(t *testing.T) {
+        src := `
+fn test() -> Int:
+    return [].reduce(42, |acc, x| -> acc + x)
+`
+        expectInt(t, runFunc(t, src, "test", nil), 42)
+}
+
+func TestListForEach(t *testing.T) {
+        // for_each returns None; we test it doesn't crash
+        src := `
+fn test() -> Int:
+    let xs = [1, 2, 3]
+    xs.for_each(|x| -> x * 2)
+    return xs.len()
+`
+        expectInt(t, runFunc(t, src, "test", nil), 3)
+}
+
+func TestListFlatMap(t *testing.T) {
+        src := `
+fn test() -> List:
+    return [1, 2, 3].flat_map(|x| -> [x, x * 10])
+`
+        result := runFunc(t, src, "test", nil)
+        list := result.(*ListVal)
+        if len(list.Elements) != 6 {
+                t.Fatalf("expected 6 elements, got %d", len(list.Elements))
+        }
+        expectInt(t, list.Elements[0], 1)
+        expectInt(t, list.Elements[1], 10)
+        expectInt(t, list.Elements[2], 2)
+        expectInt(t, list.Elements[3], 20)
+        expectInt(t, list.Elements[4], 3)
+        expectInt(t, list.Elements[5], 30)
+}
+
+func TestListFlatten(t *testing.T) {
+        src := `
+fn test() -> List:
+    return [[1, 2], [3, 4], [5]].flatten()
+`
+        result := runFunc(t, src, "test", nil)
+        list := result.(*ListVal)
+        if len(list.Elements) != 5 {
+                t.Fatalf("expected 5 elements, got %d", len(list.Elements))
+        }
+        expectInt(t, list.Elements[0], 1)
+        expectInt(t, list.Elements[4], 5)
+}
+
+func TestListFlattenMixed(t *testing.T) {
+        src := `
+fn test() -> List:
+    return [[1, 2], 3, [4]].flatten()
+`
+        result := runFunc(t, src, "test", nil)
+        list := result.(*ListVal)
+        if len(list.Elements) != 4 {
+                t.Fatalf("expected 4 elements, got %d", len(list.Elements))
+        }
+}
+
+func TestListFlattenEmpty(t *testing.T) {
+        src := `
+fn test() -> Int:
+    return [].flatten().len()
+`
+        expectInt(t, runFunc(t, src, "test", nil), 0)
+}
+
+func TestListAny(t *testing.T) {
+        src := `
+fn test_yes() -> Bool:
+    return [1, 2, 3].any(|x| -> x > 2)
+
+fn test_no() -> Bool:
+    return [1, 2, 3].any(|x| -> x > 10)
+
+fn test_empty() -> Bool:
+    return [].any(|x| -> x > 0)
+`
+        expectBool(t, runFunc(t, src, "test_yes", nil), true)
+        expectBool(t, runFunc(t, src, "test_no", nil), false)
+        expectBool(t, runFunc(t, src, "test_empty", nil), false)
+}
+
+func TestListAll(t *testing.T) {
+        src := `
+fn test_yes() -> Bool:
+    return [2, 4, 6].all(|x| -> x % 2 == 0)
+
+fn test_no() -> Bool:
+    return [2, 3, 6].all(|x| -> x % 2 == 0)
+
+fn test_empty() -> Bool:
+    return [].all(|x| -> x > 0)
+`
+        expectBool(t, runFunc(t, src, "test_yes", nil), true)
+        expectBool(t, runFunc(t, src, "test_no", nil), false)
+        expectBool(t, runFunc(t, src, "test_empty", nil), true)
+}
+
+func TestListCount(t *testing.T) {
+        src := `
+fn test_all() -> Int:
+    return [1, 2, 3].count()
+
+fn test_pred() -> Int:
+    return [1, 2, 3, 4, 5].count(|x| -> x > 3)
+`
+        expectInt(t, runFunc(t, src, "test_all", nil), 3)
+        expectInt(t, runFunc(t, src, "test_pred", nil), 2)
+}
+
+func TestListUnique(t *testing.T) {
+        src := `
+fn test() -> List:
+    return [1, 2, 2, 3, 1, 3].unique()
+`
+        result := runFunc(t, src, "test", nil)
+        list := result.(*ListVal)
+        if len(list.Elements) != 3 {
+                t.Fatalf("expected 3 elements, got %d", len(list.Elements))
+        }
+        expectInt(t, list.Elements[0], 1)
+        expectInt(t, list.Elements[1], 2)
+        expectInt(t, list.Elements[2], 3)
+}
+
+func TestListUniqueEmpty(t *testing.T) {
+        src := `
+fn test() -> Int:
+    return [].unique().len()
+`
+        expectInt(t, runFunc(t, src, "test", nil), 0)
+}
+
+func TestListSum(t *testing.T) {
+        src := `
+fn test_int() -> Int:
+    return [1, 2, 3, 4].sum()
+
+fn test_empty() -> Int:
+    return [].sum()
+`
+        expectInt(t, runFunc(t, src, "test_int", nil), 10)
+        expectInt(t, runFunc(t, src, "test_empty", nil), 0)
+}
+
+func TestListSumFloat(t *testing.T) {
+        src := `
+fn test() -> Float:
+    return [1.5, 2.5, 3.0].sum()
+`
+        result := runFunc(t, src, "test", nil)
+        fv, ok := result.(*FloatVal)
+        if !ok {
+                t.Fatalf("expected FloatVal, got %T", result)
+        }
+        if fv.Val != 7.0 {
+                t.Fatalf("expected 7.0, got %g", fv.Val)
+        }
+}
+
+func TestListMin(t *testing.T) {
+        src := `
+fn test() -> Int:
+    match [3, 1, 2].min():
+        case Some(v):
+            return v
+        case _:
+            return -1
+
+fn test_empty() -> Int:
+    match [].min():
+        case Some(v):
+            return v
+        case _:
+            return -1
+`
+        expectInt(t, runFunc(t, src, "test", nil), 1)
+        expectInt(t, runFunc(t, src, "test_empty", nil), -1)
+}
+
+func TestListMax(t *testing.T) {
+        src := `
+fn test() -> Int:
+    match [3, 1, 2].max():
+        case Some(v):
+            return v
+        case _:
+            return -1
+
+fn test_empty() -> Int:
+    match [].max():
+        case Some(v):
+            return v
+        case _:
+            return -1
+`
+        expectInt(t, runFunc(t, src, "test", nil), 3)
+        expectInt(t, runFunc(t, src, "test_empty", nil), -1)
+}
+
+func TestListSort(t *testing.T) {
+        src := `
+fn test() -> List:
+    return [3, 1, 4, 1, 5, 9, 2].sort()
+`
+        result := runFunc(t, src, "test", nil)
+        list := result.(*ListVal)
+        expected := []int64{1, 1, 2, 3, 4, 5, 9}
+        if len(list.Elements) != len(expected) {
+                t.Fatalf("expected %d elements, got %d", len(expected), len(list.Elements))
+        }
+        for i, e := range expected {
+                expectInt(t, list.Elements[i], e)
+        }
+}
+
+func TestListSortStrings(t *testing.T) {
+        src := `
+fn test() -> List:
+    return ["banana", "apple", "cherry"].sort()
+`
+        result := runFunc(t, src, "test", nil)
+        list := result.(*ListVal)
+        expectString(t, list.Elements[0], "apple")
+        expectString(t, list.Elements[1], "banana")
+        expectString(t, list.Elements[2], "cherry")
+}
+
+func TestListSortEmpty(t *testing.T) {
+        src := `
+fn test() -> Int:
+    return [].sort().len()
+`
+        expectInt(t, runFunc(t, src, "test", nil), 0)
+}
+
+func TestListZip(t *testing.T) {
+        src := `
+fn test() -> Int:
+    let zipped = [1, 2, 3].zip(["a", "b", "c"])
+    return zipped.len()
+`
+        expectInt(t, runFunc(t, src, "test", nil), 3)
+}
+
+func TestListZipUnequal(t *testing.T) {
+        src := `
+fn test() -> Int:
+    let zipped = [1, 2, 3].zip(["a", "b"])
+    return zipped.len()
+`
+        expectInt(t, runFunc(t, src, "test", nil), 2)
+}
+
+func TestListEnumerate(t *testing.T) {
+        src := `
+fn test() -> Int:
+    let items = ["a", "b", "c"].enumerate()
+    return items.len()
+`
+        expectInt(t, runFunc(t, src, "test", nil), 3)
+}
+
+func TestListMethodChaining(t *testing.T) {
+        src := `
+fn test() -> Int:
+    return [1, 2, 3, 4, 5, 6].filter(|x| -> x % 2 == 0).map(|x| -> x * 10).sum()
+`
+        expectInt(t, runFunc(t, src, "test", nil), 120)
+}
+
+func TestListMethodChainingComplex(t *testing.T) {
+        src := `
+fn test() -> String:
+    return [3, 1, 2].sort().map(|x| -> x * 2).join(", ")
+`
+        expectString(t, runFunc(t, src, "test", nil), "2, 4, 6")
+}
+
+func TestListMapFilterReduce(t *testing.T) {
+        src := `
+fn test() -> Int:
+    return [1, 2, 3, 4, 5].filter(|x| -> x > 2).map(|x| -> x * x).reduce(0, |a, b| -> a + b)
+`
+        // filter: [3, 4, 5], map: [9, 16, 25], reduce: 50
+        expectInt(t, runFunc(t, src, "test", nil), 50)
+}
+
+func TestListReverseDoesNotMutate(t *testing.T) {
+        src := `
+fn test() -> Int:
+    let xs = [1, 2, 3]
+    let rev = xs.reverse()
+    let opt = xs.get(0)
+    match opt:
+        case Some(v):
+            return v
+        case _:
+            return -1
+`
+        expectInt(t, runFunc(t, src, "test", nil), 1)
+}
+
+func TestListSortDoesNotMutate(t *testing.T) {
+        src := `
+fn test() -> Int:
+    let xs = [3, 1, 2]
+    let sorted = xs.sort()
+    let opt = xs.get(0)
+    match opt:
+        case Some(v):
+            return v
+        case _:
+            return -1
+`
+        expectInt(t, runFunc(t, src, "test", nil), 3)
+}
