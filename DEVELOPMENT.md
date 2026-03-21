@@ -98,13 +98,19 @@ aura-toolchain/
 │   │   ├── checker.go           # Multi-pass type checker
 │   │   ├── errors.go            # AI-parseable structured errors
 │   │   └── checker_test.go      # 48 tests
-│   └── interpreter/             # [Phase 3] Tree-walk interpreter ✅
+│   └── interpreter/             # [Phase 3+4.1] Interpreter + Runtime Methods ✅
 │       └── value.go             # Value system (Int, Float, String, Bool, etc.)
 │       └── env.go               # Environment with scope chain
 │       └── eval.go              # Expression/statement evaluator
 │       └── interpreter.go       # Module execution & builtins
 │       └── test.go              # Test runner
-│       └── interpreter_test.go  # 112 tests
+│       └── methods.go           # Method dispatch registry
+│       └── methods_string.go    # 22 String methods
+│       └── methods_list.go      # 27 List methods + helpers
+│       └── methods_map.go       # 24 Map methods
+│       └── methods_option.go    # 17 Option + 18 Result methods
+│       └── interpreter_test.go  # 127 core tests
+│       └── methods_test.go      # 222 method tests
 ├── testdata/                    # Sample .aura files
 ├── user_docs/                   # User-facing documentation
 ├── ROADMAP.md                   # Development roadmap
@@ -328,6 +334,66 @@ go tool cover -html=coverage.out
 [ ] Import/module resolution
 ```
 
+### Phase 4.1: Core Runtime Methods ✅ COMPLETE
+
+> Implemented 108+ methods across 5 core types via centralized method dispatch registry.
+> 222 new tests in `methods_test.go` — 468 total tests across all packages.
+
+#### Method Dispatch Infrastructure (`methods.go`)
+```
+[x] RegisterMethod(ValueType, "name", func) registry system
+[x] LookupMethod() and resolveMethod() for dispatch
+[x] Integration with eval.go FieldAccess evaluation
+[x] callValue() helper for invoking Aura functions from Go
+[x] cmpValues() helper for type-safe ordering
+```
+
+#### String Methods (`methods_string.go`) — 22 methods
+```
+[x] Core: len, upper/to_upper, lower/to_lower, contains, split, trim, trim_start, trim_end
+[x] Search: starts_with, ends_with, index_of (→ Option), replace
+[x] Transform: repeat, reverse, chars, slice (with bounds checking)
+[x] Aliases: length → len
+```
+
+#### List Methods (`methods_list.go`) — 27 methods
+```
+[x] Core: len/length, append/push, contains, is_empty
+[x] Safe accessors: first, last, get (all → Option)
+[x] Mutation: pop (→ Option), remove
+[x] Transform: reverse, slice, join, index_of (→ Option)
+[x] Higher-order: map, filter, reduce, for_each, flat_map, flatten
+[x] Predicates: any, all, count
+[x] Utilities: unique, sum, min/max (→ Option), sort, zip, enumerate
+```
+
+#### Map Methods (`methods_map.go`) — 24 methods
+```
+[x] Size: len/length/size, is_empty
+[x] Access: keys, values, entries, get (→ Option), get_or, has/contains_key, contains_value
+[x] Mutation: set, remove (→ Option), delete (→ Bool), clear, merge
+[x] Higher-order: filter, map, for_each, reduce, any, all, count
+[x] Utilities: to_list, find (→ Option)
+```
+
+#### Option Methods (`methods_option.go`) — 17 methods
+```
+[x] Predicates: is_some, is_none
+[x] Extraction: unwrap, expect, unwrap_or, unwrap_or_else
+[x] Monadic: map, flat_map, and_then, filter, flatten
+[x] Combinators: or_else, or, and, zip
+[x] Query/conversion: contains, to_result
+```
+
+#### Result Methods (`methods_option.go`) — 18 methods
+```
+[x] Predicates: is_ok, is_err
+[x] Extraction: unwrap, unwrap_err, expect, unwrap_or, unwrap_or_else
+[x] Monadic: map, map_err, and_then, or_else, flatten
+[x] Combinators: or, and
+[x] Query/conversion: contains, contains_err, ok, err, to_option
+```
+
 ---
 
 ## Testing Strategy
@@ -387,7 +453,7 @@ Each package should have a **single, clear responsibility**:
 - `symbols` — Symbol table with hierarchical scope management. Used by the checker.
 - `types` — Type system representation, equality, subtyping, and registry. Used by the checker.
 - `checker` — Multi-pass type checker integrating symbols, types, and effect tracking. Depends on parser output.
-- `interpreter` — Tree-walk interpreter. Evaluates AST directly: value system, environment/scope chain, expression/statement evaluation, builtins, test runner, string interpolation, pipeline operator, option chaining. Depends on `ast`, `token`, `lexer`, `parser`. 112 tests.
+- `interpreter` — Tree-walk interpreter. Evaluates AST directly: value system, environment/scope chain, expression/statement evaluation, builtins, test runner, string interpolation, pipeline operator, option chaining. Includes method dispatch registry with 108+ built-in methods for String, List, Map, Option, and Result types. Depends on `ast`, `token`, `lexer`, `parser`. 349 tests.
 
 ### Naming Conventions
 
