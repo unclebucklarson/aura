@@ -1,4 +1,4 @@
-# AI Next Session Context — Phase 4.1 Chunk 4
+# AI Next Session Context — Phase 4.2 (Post Phase 4.1 Completion)
 
 > **Purpose:** This file provides complete context for any AI agent (or human developer) to pick up exactly where we left off. Read this before starting any work.
 >
@@ -20,9 +20,12 @@
 | Phase 4.1 Chunk 1 | Method Dispatch Infrastructure + String Methods (22 methods) | ✅ Complete |
 | Phase 4.1 Chunk 2 | List Methods (27 methods) | ✅ Complete |
 | Phase 4.1 Chunk 3 | Map Methods (24 methods) | ✅ Complete |
+| **Phase 4.1 Chunk 4** | **Option Methods (17) + Result Methods (18) = 35 methods** | **✅ Complete** |
 
-- **Test count:** 379 test functions passing (259 interpreter, 11 lexer, 16 parser, plus checker/symbols/types/formatter)
-- **Language version:** Pre-1.0, Phase 4.1 Chunk 3 complete
+### 🎉 Phase 4.1 Core Runtime Methods — COMPLETE! 🎉
+
+- **Test count:** 468 test functions passing (all packages, zero regressions)
+- **Language version:** Pre-1.0, Phase 4.1 fully complete
 - **Repository:** `github.com/unclebucklarson/aura`
 - **Branch:** `main`
 
@@ -46,9 +49,27 @@
 - Size/emptiness: `len`, `length`, `size`, `is_empty`
 - Key/value accessors: `keys`, `values`, `entries`
 - Lookup: `has`, `contains_key`, `contains_value`, `get` (returns Option), `get_or` (with default)
-- Mutation: `set`, `remove` (returns Option of removed value), `delete` (returns Bool), `clear`, `merge`
+- Mutation: `set`, `remove` (returns Option), `delete` (returns Bool), `clear`, `merge`
 - Higher-order: `filter`, `map`, `for_each`, `reduce`, `any`, `all`, `count` (optional predicate)
 - Utility: `to_list`, `find` (returns Option)
+
+**Option methods (17 methods in `methods_option.go`):**
+- Predicates: `is_some`, `is_none`
+- Extraction: `unwrap`, `expect`, `unwrap_or`, `unwrap_or_else`
+- Transformation: `map`, `flat_map`, `and_then`, `filter`, `flatten`
+- Combinators: `or`, `or_else`, `and`, `zip`
+- Querying: `contains`
+- Conversion: `to_result`
+
+**Result methods (18 methods in `methods_option.go`):**
+- Predicates: `is_ok`, `is_err`
+- Extraction: `unwrap`, `unwrap_err`, `expect`, `unwrap_or`, `unwrap_or_else`
+- Transformation: `map`, `map_err`, `and_then`, `or_else`, `flatten`
+- Combinators: `or`, `and`
+- Querying: `contains`, `contains_err`
+- Conversion: `ok`, `err`, `to_option`
+
+**Total: 108+ registered methods across 4 types**
 
 **Helper functions (in `methods_list.go`):**
 - `callValue(fn Value, args []Value) Value` — invokes any callable (FunctionVal, LambdaVal, BuiltinFnVal)
@@ -57,94 +78,77 @@
 **Helper functions (in `methods_map.go`):**
 - `mapFindKey(m *MapVal, key Value) int` — finds index of key in map, or -1
 
-**Existing Option/Result methods:** None (constructors `Some`, `Ok`, `Err` exist as builtins)
-
 ---
 
 ## What We Just Did (Session Ending 2026-03-20)
 
-1. **Implemented 24 map methods** in `pkg/interpreter/methods_map.go`:
-   - Size: `len`, `length`, `size`, `is_empty`
-   - Accessors: `keys`, `values`, `entries` (returns list of [key, value] lists)
-   - Lookup: `has`, `contains_key`, `contains_value`, `get` (returns Option), `get_or` (with default)
-   - Mutation: `set` (add/update), `remove` (returns Option), `delete` (returns Bool), `clear`, `merge` (overwrites existing keys)
-   - Higher-order: `filter(fn)`, `map(fn)`, `for_each(fn)`, `reduce(init, fn)`, `any(fn)`, `all(fn)`, `count(fn?)`
-   - Utility: `to_list` (alias for entries), `find(fn)` (returns Option of [key, value])
+1. **Implemented 17 Option methods** in `pkg/interpreter/methods_option.go`:
+   - `is_some()`, `is_none()` — predicates
+   - `unwrap()`, `expect(msg)` — extraction with panic on None
+   - `unwrap_or(default)`, `unwrap_or_else(fn)` — safe extraction
+   - `map(fn)`, `flat_map(fn)`, `and_then(fn)` — functor/monad operations
+   - `filter(fn)` — conditional keep
+   - `or(alt)`, `or_else(fn)`, `and(other)` — combinators
+   - `zip(other)` — pair two Options
+   - `flatten()` — unwrap nested Option
+   - `contains(val)` — check inner value
+   - `to_result(err)` — convert to Result
 
-2. **Created `mapFindKey` helper** for DRY key lookup across map methods
+2. **Implemented 18 Result methods** in same file:
+   - `is_ok()`, `is_err()` — predicates
+   - `unwrap()`, `unwrap_err()`, `expect(msg)` — extraction
+   - `unwrap_or(default)`, `unwrap_or_else(fn)` — safe extraction
+   - `map(fn)`, `map_err(fn)` — transform Ok/Err
+   - `and_then(fn)`, `or_else(fn)` — monadic bind
+   - `or(alt)`, `and(other)` — combinators
+   - `contains(val)`, `contains_err(val)` — querying
+   - `ok()`, `err()`, `to_option()` — conversion to Option
+   - `flatten()` — unwrap nested Result
 
-3. **Wrote 41 new test functions** in `pkg/interpreter/methods_test.go`:
-   - Individual tests for all map methods
-   - Lambda and named function tests
-   - Method chaining: `filter→map→len`
-   - Empty map operations
-   - Mutation behavior: `set`, `remove`, `delete`, `clear`, `merge` mutate the receiver
-   - Non-mutation: `filter`, `map` return new maps without modifying original
-   - Error handling: `merge` with non-map argument
-   - Edge cases: empty maps, missing keys, vacuous truth for `all` on empty
-   - All 379 tests pass (338 existing + 41 new, zero regressions)
+3. **Wrote 89 new test functions** in `pkg/interpreter/methods_test.go`:
+   - Individual tests for every Option method
+   - Individual tests for every Result method
+   - Method chaining: `map→map→unwrap`, `and_then→and_then→unwrap`
+   - Monadic composition with named functions (`safe_div`)
+   - Short-circuit behavior for None/Err
+   - Error handling: `unwrap` on None/Err, `expect` with custom messages
+   - Integration: Option↔Result round-trips (`to_result`/`ok`/`to_option`)
+   - Registry verification tests
+   - All 468 tests pass (379 existing + 89 new, zero regressions)
 
 ### Important Design Notes
 
-- **Map field access vs method access:** `MapVal` dot access (`m.foo`) first checks for a string key matching the field name, then falls through to the method registry. This means if a map has a key named `"len"`, `m.len` returns the key's value, not the method. Use `m.len()` through the call path which properly resolves via the method registry.
-- **Insertion order preserved:** All map methods maintain insertion order since `MapVal` uses parallel `Keys` and `Values` slices.
-- **Higher-order map methods pass (key, value):** Unlike list HOFs which pass a single element, map `filter`, `map`, `for_each`, `reduce`, `any`, `all`, `count`, `find` pass both key and value to the callback. `reduce` passes (acc, key, value).
+- **Option `flat_map`/`and_then` enforce return type:** The callback must return an `OptionVal`; otherwise a RuntimeError is raised.
+- **Result `and_then`/`or_else` enforce return type:** The callback must return a `ResultVal`.
+- **Option `or` accepts any value:** Unlike `or_else`, `or(alt)` takes a direct value, not a function.
+- **Result methods preserve error on Err:** `map` on Err returns the original Err unchanged.
+- **`flatten()` is idempotent on non-nested values:** `Some(42).flatten()` returns `Some(42)`.
 
 ---
 
-## Next Task: Phase 4.1 Chunk 4 — Option/Result Methods
+## Next Task: Phase 4.2 — Import System & Module Resolution
 
 ### Goal
 
-Extend the method registry with Option and Result methods to complete Phase 4.1.
+Implement multi-file support so programs can import from other Aura files and the standard library.
 
-### Option Methods to Implement in `pkg/interpreter/methods_option.go`
+### Suggested Steps
 
-| Method | Signature | Description | Notes |
-|--------|-----------|-------------|-------|
-| `is_some()` | `() -> Bool` | Check if Some | |
-| `is_none()` | `() -> Bool` | Check if None | |
-| `unwrap()` | `() -> T` | Get value or panic | |
-| `unwrap_or(default)` | `(T) -> T` | Get value or return default | |
-| `unwrap_or_else(fn)` | `(Fn() -> T) -> T` | Get value or call fn | |
-| `map(fn)` | `(Fn(T) -> U) -> Option[U]` | Transform inner value | |
-| `flat_map(fn)` | `(Fn(T) -> Option[U]) -> Option[U]` | Transform, flatten Option | |
-| `filter(fn)` | `(Fn(T) -> Bool) -> Option[T]` | Keep if predicate true | |
-| `or_else(fn)` | `(Fn() -> Option[T]) -> Option[T]` | Alternative if None | |
-| `and_then(fn)` | `(Fn(T) -> Option[U]) -> Option[U]` | Alias for flat_map | |
-| `expect(msg)` | `(String) -> T` | Get value or panic with message | |
+1. **Design import syntax** (e.g., `import std.json`, `import "./utils"`, `from std.testing import assert_eq`)
+2. **Implement module resolver** — find and load source files
+3. **Implement import evaluation** — parse, check, and evaluate imported modules
+4. **Namespace/scope management** — imported symbols should be accessible
+5. **Circular import detection**
+6. **Standard library structure** — `std/` directory with foundational modules
 
-### Result Methods to Implement in `pkg/interpreter/methods_result.go` (or same file)
+### Standard Library Priorities (Phase 4.2)
 
-| Method | Signature | Description | Notes |
-|--------|-----------|-------------|-------|
-| `is_ok()` | `() -> Bool` | Check if Ok | |
-| `is_err()` | `() -> Bool` | Check if Err | |
-| `unwrap()` | `() -> T` | Get Ok value or panic | |
-| `unwrap_err()` | `() -> E` | Get Err value or panic | |
-| `unwrap_or(default)` | `(T) -> T` | Get Ok value or default | |
-| `unwrap_or_else(fn)` | `(Fn(E) -> T) -> T` | Get Ok or transform Err | |
-| `map(fn)` | `(Fn(T) -> U) -> Result[U,E]` | Transform Ok value | |
-| `map_err(fn)` | `(Fn(E) -> F) -> Result[T,F]` | Transform Err value | |
-| `and_then(fn)` | `(Fn(T) -> Result[U,E]) -> Result[U,E]` | Chain Results | |
-| `or_else(fn)` | `(Fn(E) -> Result[T,F]) -> Result[T,F]` | Alternative on Err | |
-| `ok()` | `() -> Option[T]` | Convert to Option (drops Err) | |
-| `err()` | `() -> Option[E]` | Convert Err to Option | |
-
-### Testing Target
-
-- 25-35 new test functions
-- Target total: ~410+ tests
-
----
-
-## What Comes After (Post Phase 4.1)
-
-After Chunk 4 → Phase 4.1 (Core Runtime Methods) is complete → move to:
-
-1. **Import System & Module Resolution** (Phase 4.2 prerequisite)
-2. **Standard Library Foundation** (`std.testing`, `std.json`, `std.io`)
-3. **Effect Runtime** (Phase 4.3)
+| Module | Key Exports | Priority |
+|--------|-------------|----------|
+| `std.testing` | `assert_eq`, `assert_ne`, `assert_true`, `assert_false` | High |
+| `std.json` | `parse`, `stringify` | High |
+| `std.io` | `read_file`, `write_file`, `print` | Medium |
+| `std.math` | `abs`, `max`, `min`, `floor`, `ceil` | Medium |
 
 ---
 
@@ -154,9 +158,12 @@ After Chunk 4 → Phase 4.1 (Core Runtime Methods) is complete → move to:
 
 **Method registration** (established in Chunk 1):
 ```go
-RegisterMethod(TypeMap, "get", func(receiver Value, args []Value) Value {
-    m := receiver.(*MapVal)
-    // ... implementation
+RegisterMethod(TypeOption, "unwrap", func(receiver Value, args []Value) Value {
+    o := receiver.(*OptionVal)
+    if !o.IsSome {
+        panic(&RuntimeError{Message: "called unwrap() on a None value"})
+    }
+    return o.Val
 })
 ```
 
@@ -165,16 +172,16 @@ RegisterMethod(TypeMap, "get", func(receiver Value, args []Value) Value {
 result := callValue(fn, []Value{key, value})
 ```
 
-**Map key lookup helper** (established in Chunk 3):
-```go
-idx := mapFindKey(m, key)
-if idx < 0 { /* not found */ }
-```
-
 **Returning Options** (common pattern for safe access):
 ```go
 return &OptionVal{IsSome: true, Val: value}  // Some(value)
 return &OptionVal{IsSome: false}               // None
+```
+
+**Returning Results:**
+```go
+return &ResultVal{IsOk: true, Val: value}   // Ok(value)
+return &ResultVal{IsOk: false, Val: errVal} // Err(errVal)
 ```
 
 **Runtime errors** in method implementations:
@@ -190,16 +197,17 @@ panic(&RuntimeError{Message: "error message"})
 | `pkg/interpreter/methods_string.go` | 22 string methods |
 | `pkg/interpreter/methods_list.go` | 27 list methods + `callValue` + `cmpValues` helpers |
 | `pkg/interpreter/methods_map.go` | 24 map methods + `mapFindKey` helper |
-| `pkg/interpreter/methods_test.go` | 133 test functions (40 string + 52 list + 41 map) |
+| `pkg/interpreter/methods_option.go` | 17 Option methods + 18 Result methods |
+| `pkg/interpreter/methods_test.go` | 222 test functions (40 string + 52 list + 41 map + 89 option/result) |
 
 ### Running Tests
 
 ```bash
 cd /path/to/aura
 go test ./pkg/interpreter/ -v            # interpreter tests only
-go test ./...                             # all tests (379 passing)
-go test ./pkg/interpreter/ -run TestMap   # map method tests only
-go test ./pkg/interpreter/ -run TestOption # option method tests (Chunk 4)
+go test ./...                             # all tests (468 passing)
+go test ./pkg/interpreter/ -run TestOption # option method tests
+go test ./pkg/interpreter/ -run TestResult # result method tests
 ```
 
 ---
@@ -212,11 +220,12 @@ go test ./pkg/interpreter/ -run TestOption # option method tests (Chunk 4)
 | String methods | `pkg/interpreter/methods_string.go` |
 | List methods | `pkg/interpreter/methods_list.go` |
 | Map methods | `pkg/interpreter/methods_map.go` |
+| Option/Result methods | `pkg/interpreter/methods_option.go` |
 | Method tests | `pkg/interpreter/methods_test.go` |
 | Interpreter source | `pkg/interpreter/eval.go` (main evaluation loop) |
 | Value definitions | `pkg/interpreter/value.go` |
 | Existing builtins | `pkg/interpreter/interpreter.go` → `registerBuiltins()` |
-| Interpreter tests | `pkg/interpreter/interpreter_test.go` (126 tests) |
+| Interpreter tests | `pkg/interpreter/interpreter_test.go` |
 | Lexer | `pkg/lexer/lexer.go` |
 | Parser | `pkg/parser/parser.go` |
 | AST nodes | `pkg/ast/ast.go` |
@@ -225,4 +234,4 @@ go test ./pkg/interpreter/ -run TestOption # option method tests (Chunk 4)
 
 ---
 
-*This context file was generated at the end of the 2026-03-20 session. It should be updated or replaced at the end of the next session.*
+*This context file was generated at the end of the 2026-03-20 session. Phase 4.1 is now fully complete! 🎉*

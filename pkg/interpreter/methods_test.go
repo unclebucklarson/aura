@@ -1685,3 +1685,878 @@ fn test() -> Bool:
         // all on empty is vacuously true
         expectBool(t, runFunc(t, src, "test", nil), true)
 }
+
+
+
+// =============================================================================
+// Option Method Tests
+// =============================================================================
+
+func TestOptionIsSome(t *testing.T) {
+        src := `
+fn test() -> Bool:
+    let o = Some(42)
+    return o.is_some()
+`
+        expectBool(t, runFunc(t, src, "test", nil), true)
+}
+
+func TestOptionIsSomeNone(t *testing.T) {
+        src := `
+fn test() -> Bool:
+    let o = None
+    return o.is_some()
+`
+        expectBool(t, runFunc(t, src, "test", nil), false)
+}
+
+func TestOptionIsNone(t *testing.T) {
+        src := `
+fn test() -> Bool:
+    let o = None
+    return o.is_none()
+`
+        expectBool(t, runFunc(t, src, "test", nil), true)
+}
+
+func TestOptionIsNoneSome(t *testing.T) {
+        src := `
+fn test() -> Bool:
+    let o = Some("hello")
+    return o.is_none()
+`
+        expectBool(t, runFunc(t, src, "test", nil), false)
+}
+
+func TestOptionUnwrapSome(t *testing.T) {
+        src := `
+fn test() -> Int:
+    let o = Some(42)
+    return o.unwrap()
+`
+        expectInt(t, runFunc(t, src, "test", nil), 42)
+}
+
+func TestOptionUnwrapNonePanics(t *testing.T) {
+        src := `
+fn test() -> Int:
+    let o = None
+    return o.unwrap()
+`
+        expectRuntimeError(t, src, "test", "called unwrap() on a None value")
+}
+
+func TestOptionExpectSome(t *testing.T) {
+        src := `
+fn test() -> Int:
+    let o = Some(99)
+    return o.expect("should have value")
+`
+        expectInt(t, runFunc(t, src, "test", nil), 99)
+}
+
+func TestOptionExpectNonePanics(t *testing.T) {
+        src := `
+fn test() -> Int:
+    let o = None
+    return o.expect("value was missing!")
+`
+        expectRuntimeError(t, src, "test", "value was missing!")
+}
+
+func TestOptionUnwrapOr(t *testing.T) {
+        src := `
+fn test() -> Int:
+    let o = None
+    return o.unwrap_or(10)
+`
+        expectInt(t, runFunc(t, src, "test", nil), 10)
+}
+
+func TestOptionUnwrapOrSome(t *testing.T) {
+        src := `
+fn test() -> Int:
+    let o = Some(42)
+    return o.unwrap_or(10)
+`
+        expectInt(t, runFunc(t, src, "test", nil), 42)
+}
+
+func TestOptionUnwrapOrElseNone(t *testing.T) {
+        src := `
+fn test() -> Int:
+    let o = None
+    return o.unwrap_or_else(|| -> 99)
+`
+        expectInt(t, runFunc(t, src, "test", nil), 99)
+}
+
+func TestOptionUnwrapOrElseSome(t *testing.T) {
+        src := `
+fn test() -> Int:
+    let o = Some(5)
+    return o.unwrap_or_else(|| -> 99)
+`
+        expectInt(t, runFunc(t, src, "test", nil), 5)
+}
+
+func TestOptionMapSome(t *testing.T) {
+        src := `
+fn test() -> Int:
+    let o = Some(10)
+    let mapped = o.map(|x| -> x * 2)
+    return mapped.unwrap()
+`
+        expectInt(t, runFunc(t, src, "test", nil), 20)
+}
+
+func TestOptionMapNone(t *testing.T) {
+        src := `
+fn test() -> Bool:
+    let o = None
+    let mapped = o.map(|x| -> x * 2)
+    return mapped.is_none()
+`
+        expectBool(t, runFunc(t, src, "test", nil), true)
+}
+
+func TestOptionFlatMapSome(t *testing.T) {
+        src := `
+fn test() -> Int:
+    let o = Some(10)
+    let result = o.flat_map(|x| -> Some(x + 5))
+    return result.unwrap()
+`
+        expectInt(t, runFunc(t, src, "test", nil), 15)
+}
+
+func TestOptionFlatMapNone(t *testing.T) {
+        src := `
+fn test() -> Bool:
+    let o = None
+    let result = o.flat_map(|x| -> Some(x + 5))
+    return result.is_none()
+`
+        expectBool(t, runFunc(t, src, "test", nil), true)
+}
+
+func TestOptionFlatMapReturnsNone(t *testing.T) {
+        src := `
+fn test() -> Bool:
+    let o = Some(10)
+    let result = o.flat_map(|x| -> None)
+    return result.is_none()
+`
+        expectBool(t, runFunc(t, src, "test", nil), true)
+}
+
+func TestOptionAndThen(t *testing.T) {
+        src := `
+fn test() -> Int:
+    let o = Some(3)
+    let result = o.and_then(|x| -> Some(x * x))
+    return result.unwrap()
+`
+        expectInt(t, runFunc(t, src, "test", nil), 9)
+}
+
+func TestOptionAndThenChain(t *testing.T) {
+        src := `
+fn test() -> Int:
+    let o = Some(2)
+    let result = o.and_then(|x| -> Some(x + 1)).and_then(|x| -> Some(x * 10))
+    return result.unwrap()
+`
+        expectInt(t, runFunc(t, src, "test", nil), 30)
+}
+
+func TestOptionFilterKeep(t *testing.T) {
+        src := `
+fn test() -> Int:
+    let o = Some(10)
+    let result = o.filter(|x| -> x > 5)
+    return result.unwrap()
+`
+        expectInt(t, runFunc(t, src, "test", nil), 10)
+}
+
+func TestOptionFilterReject(t *testing.T) {
+        src := `
+fn test() -> Bool:
+    let o = Some(3)
+    let result = o.filter(|x| -> x > 5)
+    return result.is_none()
+`
+        expectBool(t, runFunc(t, src, "test", nil), true)
+}
+
+func TestOptionFilterNone(t *testing.T) {
+        src := `
+fn test() -> Bool:
+    let o = None
+    let result = o.filter(|x| -> x > 5)
+    return result.is_none()
+`
+        expectBool(t, runFunc(t, src, "test", nil), true)
+}
+
+func TestOptionOrElseSome(t *testing.T) {
+        src := `
+fn test() -> Int:
+    let o = Some(42)
+    let result = o.or_else(|| -> Some(99))
+    return result.unwrap()
+`
+        expectInt(t, runFunc(t, src, "test", nil), 42)
+}
+
+func TestOptionOrElseNone(t *testing.T) {
+        src := `
+fn test() -> Int:
+    let o = None
+    let result = o.or_else(|| -> Some(99))
+    return result.unwrap()
+`
+        expectInt(t, runFunc(t, src, "test", nil), 99)
+}
+
+func TestOptionOrSome(t *testing.T) {
+        src := `
+fn test() -> Int:
+    let o = Some(1)
+    let result = o.or(Some(2))
+    return result.unwrap()
+`
+        expectInt(t, runFunc(t, src, "test", nil), 1)
+}
+
+func TestOptionOrNone(t *testing.T) {
+        src := `
+fn test() -> Int:
+    let o = None
+    let result = o.or(Some(2))
+    return result.unwrap()
+`
+        expectInt(t, runFunc(t, src, "test", nil), 2)
+}
+
+func TestOptionAndSome(t *testing.T) {
+        src := `
+fn test() -> String:
+    let o = Some(1)
+    let result = o.and(Some("hello"))
+    return result.unwrap()
+`
+        expectString(t, runFunc(t, src, "test", nil), "hello")
+}
+
+func TestOptionAndNone(t *testing.T) {
+        src := `
+fn test() -> Bool:
+    let o = None
+    let result = o.and(Some("hello"))
+    return result.is_none()
+`
+        expectBool(t, runFunc(t, src, "test", nil), true)
+}
+
+func TestOptionContainsTrue(t *testing.T) {
+        src := `
+fn test() -> Bool:
+    let o = Some(42)
+    return o.contains(42)
+`
+        expectBool(t, runFunc(t, src, "test", nil), true)
+}
+
+func TestOptionContainsFalse(t *testing.T) {
+        src := `
+fn test() -> Bool:
+    let o = Some(42)
+    return o.contains(99)
+`
+        expectBool(t, runFunc(t, src, "test", nil), false)
+}
+
+func TestOptionContainsNone(t *testing.T) {
+        src := `
+fn test() -> Bool:
+    let o = None
+    return o.contains(42)
+`
+        expectBool(t, runFunc(t, src, "test", nil), false)
+}
+
+func TestOptionZipBothSome(t *testing.T) {
+        src := `
+fn test() -> Int:
+    let a = Some(1)
+    let b = Some(2)
+    let pair = a.zip(b).unwrap()
+    return pair.get(0).unwrap() + pair.get(1).unwrap()
+`
+        expectInt(t, runFunc(t, src, "test", nil), 3)
+}
+
+func TestOptionZipOneNone(t *testing.T) {
+        src := `
+fn test() -> Bool:
+    let a = Some(1)
+    let b = None
+    return a.zip(b).is_none()
+`
+        expectBool(t, runFunc(t, src, "test", nil), true)
+}
+
+func TestOptionZipFirstNone(t *testing.T) {
+        src := `
+fn test() -> Bool:
+    let a = None
+    let b = Some(2)
+    return a.zip(b).is_none()
+`
+        expectBool(t, runFunc(t, src, "test", nil), true)
+}
+
+func TestOptionFlatten(t *testing.T) {
+        src := `
+fn test() -> Int:
+    let o = Some(Some(42))
+    return o.flatten().unwrap()
+`
+        expectInt(t, runFunc(t, src, "test", nil), 42)
+}
+
+func TestOptionFlattenNone(t *testing.T) {
+        src := `
+fn test() -> Bool:
+    let o = None
+    return o.flatten().is_none()
+`
+        expectBool(t, runFunc(t, src, "test", nil), true)
+}
+
+func TestOptionFlattenNotNested(t *testing.T) {
+        src := `
+fn test() -> Int:
+    let o = Some(42)
+    return o.flatten().unwrap()
+`
+        expectInt(t, runFunc(t, src, "test", nil), 42)
+}
+
+func TestOptionToResult(t *testing.T) {
+        src := `
+fn test() -> Int:
+    let o = Some(42)
+    let r = o.to_result("error")
+    return r.unwrap()
+`
+        expectInt(t, runFunc(t, src, "test", nil), 42)
+}
+
+func TestOptionToResultNone(t *testing.T) {
+        src := `
+fn test() -> Bool:
+    let o = None
+    let r = o.to_result("not found")
+    return r.is_err()
+`
+        expectBool(t, runFunc(t, src, "test", nil), true)
+}
+
+func TestOptionMapChain(t *testing.T) {
+        src := `
+fn test() -> Int:
+    let o = Some(5)
+    return o.map(|x| -> x * 2).map(|x| -> x + 1).unwrap()
+`
+        expectInt(t, runFunc(t, src, "test", nil), 11)
+}
+
+func TestOptionMonadicComposition(t *testing.T) {
+        src := `
+fn safe_div(a: Int, b: Int) -> Option:
+    if b == 0:
+        return None
+    return Some(a / b)
+
+fn test() -> Int:
+    let result = Some(100).and_then(|x| -> safe_div(x, 5)).and_then(|x| -> safe_div(x, 2))
+    return result.unwrap()
+`
+        expectInt(t, runFunc(t, src, "test", nil), 10)
+}
+
+func TestOptionMonadicShortCircuit(t *testing.T) {
+        src := `
+fn safe_div(a: Int, b: Int) -> Option:
+    if b == 0:
+        return None
+    return Some(a / b)
+
+fn test() -> Bool:
+    let result = Some(100).and_then(|x| -> safe_div(x, 0)).and_then(|x| -> safe_div(x, 2))
+    return result.is_none()
+`
+        expectBool(t, runFunc(t, src, "test", nil), true)
+}
+
+// =============================================================================
+// Result Method Tests
+// =============================================================================
+
+func TestResultIsOk(t *testing.T) {
+        src := `
+fn test() -> Bool:
+    let r = Ok(42)
+    return r.is_ok()
+`
+        expectBool(t, runFunc(t, src, "test", nil), true)
+}
+
+func TestResultIsOkErr(t *testing.T) {
+        src := `
+fn test() -> Bool:
+    let r = Err("fail")
+    return r.is_ok()
+`
+        expectBool(t, runFunc(t, src, "test", nil), false)
+}
+
+func TestResultIsErr(t *testing.T) {
+        src := `
+fn test() -> Bool:
+    let r = Err("fail")
+    return r.is_err()
+`
+        expectBool(t, runFunc(t, src, "test", nil), true)
+}
+
+func TestResultIsErrOk(t *testing.T) {
+        src := `
+fn test() -> Bool:
+    let r = Ok(42)
+    return r.is_err()
+`
+        expectBool(t, runFunc(t, src, "test", nil), false)
+}
+
+func TestResultUnwrapOk(t *testing.T) {
+        src := `
+fn test() -> Int:
+    let r = Ok(42)
+    return r.unwrap()
+`
+        expectInt(t, runFunc(t, src, "test", nil), 42)
+}
+
+func TestResultUnwrapErrPanics(t *testing.T) {
+        src := `
+fn test() -> Int:
+    let r = Err("bad")
+    return r.unwrap()
+`
+        expectRuntimeError(t, src, "test", "called unwrap() on an Err value")
+}
+
+func TestResultUnwrapErr(t *testing.T) {
+        src := `
+fn test() -> String:
+    let r = Err("bad")
+    return r.unwrap_err()
+`
+        expectString(t, runFunc(t, src, "test", nil), "bad")
+}
+
+func TestResultUnwrapErrOnOkPanics(t *testing.T) {
+        src := `
+fn test() -> String:
+    let r = Ok(42)
+    return r.unwrap_err()
+`
+        expectRuntimeError(t, src, "test", "called unwrap_err() on an Ok value")
+}
+
+func TestResultExpectOk(t *testing.T) {
+        src := `
+fn test() -> Int:
+    let r = Ok(42)
+    return r.expect("should work")
+`
+        expectInt(t, runFunc(t, src, "test", nil), 42)
+}
+
+func TestResultExpectErrPanics(t *testing.T) {
+        src := `
+fn test() -> Int:
+    let r = Err("bad")
+    return r.expect("operation failed!")
+`
+        expectRuntimeError(t, src, "test", "operation failed!")
+}
+
+func TestResultUnwrapOr(t *testing.T) {
+        src := `
+fn test() -> Int:
+    let r = Err("fail")
+    return r.unwrap_or(0)
+`
+        expectInt(t, runFunc(t, src, "test", nil), 0)
+}
+
+func TestResultUnwrapOrOk(t *testing.T) {
+        src := `
+fn test() -> Int:
+    let r = Ok(42)
+    return r.unwrap_or(0)
+`
+        expectInt(t, runFunc(t, src, "test", nil), 42)
+}
+
+func TestResultUnwrapOrElse(t *testing.T) {
+        src := `
+fn test() -> String:
+    let r = Err("not found")
+    return r.unwrap_or_else(|e| -> "default: " + e)
+`
+        expectString(t, runFunc(t, src, "test", nil), "default: not found")
+}
+
+func TestResultUnwrapOrElseOk(t *testing.T) {
+        src := `
+fn test() -> Int:
+    let r = Ok(42)
+    return r.unwrap_or_else(|e| -> 0)
+`
+        expectInt(t, runFunc(t, src, "test", nil), 42)
+}
+
+func TestResultMapOk(t *testing.T) {
+        src := `
+fn test() -> Int:
+    let r = Ok(10)
+    return r.map(|x| -> x * 3).unwrap()
+`
+        expectInt(t, runFunc(t, src, "test", nil), 30)
+}
+
+func TestResultMapErr(t *testing.T) {
+        src := `
+fn test() -> Bool:
+    let r = Err("bad")
+    return r.map(|x| -> x * 3).is_err()
+`
+        expectBool(t, runFunc(t, src, "test", nil), true)
+}
+
+func TestResultMapErrMethod(t *testing.T) {
+        src := `
+fn test() -> String:
+    let r = Err("bad")
+    return r.map_err(|e| -> "error: " + e).unwrap_err()
+`
+        expectString(t, runFunc(t, src, "test", nil), "error: bad")
+}
+
+func TestResultMapErrOnOk(t *testing.T) {
+        src := `
+fn test() -> Int:
+    let r = Ok(42)
+    return r.map_err(|e| -> "error: " + e).unwrap()
+`
+        expectInt(t, runFunc(t, src, "test", nil), 42)
+}
+
+func TestResultAndThenOk(t *testing.T) {
+        src := `
+fn test() -> Int:
+    let r = Ok(10)
+    return r.and_then(|x| -> Ok(x + 5)).unwrap()
+`
+        expectInt(t, runFunc(t, src, "test", nil), 15)
+}
+
+func TestResultAndThenErr(t *testing.T) {
+        src := `
+fn test() -> Bool:
+    let r = Err("fail")
+    return r.and_then(|x| -> Ok(x + 5)).is_err()
+`
+        expectBool(t, runFunc(t, src, "test", nil), true)
+}
+
+func TestResultAndThenChain(t *testing.T) {
+        src := `
+fn test() -> Int:
+    let r = Ok(2)
+    return r.and_then(|x| -> Ok(x * 3)).and_then(|x| -> Ok(x + 1)).unwrap()
+`
+        expectInt(t, runFunc(t, src, "test", nil), 7)
+}
+
+func TestResultOrElseErr(t *testing.T) {
+        src := `
+fn test() -> Int:
+    let r = Err("fail")
+    return r.or_else(|e| -> Ok(0)).unwrap()
+`
+        expectInt(t, runFunc(t, src, "test", nil), 0)
+}
+
+func TestResultOrElseOk(t *testing.T) {
+        src := `
+fn test() -> Int:
+    let r = Ok(42)
+    return r.or_else(|e| -> Ok(0)).unwrap()
+`
+        expectInt(t, runFunc(t, src, "test", nil), 42)
+}
+
+func TestResultOk(t *testing.T) {
+        src := `
+fn test() -> Int:
+    let r = Ok(42)
+    return r.ok().unwrap()
+`
+        expectInt(t, runFunc(t, src, "test", nil), 42)
+}
+
+func TestResultOkOnErr(t *testing.T) {
+        src := `
+fn test() -> Bool:
+    let r = Err("fail")
+    return r.ok().is_none()
+`
+        expectBool(t, runFunc(t, src, "test", nil), true)
+}
+
+func TestResultErrMethod(t *testing.T) {
+        src := `
+fn test() -> String:
+    let r = Err("fail")
+    return r.err().unwrap()
+`
+        expectString(t, runFunc(t, src, "test", nil), "fail")
+}
+
+func TestResultErrOnOk(t *testing.T) {
+        src := `
+fn test() -> Bool:
+    let r = Ok(42)
+    return r.err().is_none()
+`
+        expectBool(t, runFunc(t, src, "test", nil), true)
+}
+
+func TestResultContainsTrue(t *testing.T) {
+        src := `
+fn test() -> Bool:
+    let r = Ok(42)
+    return r.contains(42)
+`
+        expectBool(t, runFunc(t, src, "test", nil), true)
+}
+
+func TestResultContainsFalse(t *testing.T) {
+        src := `
+fn test() -> Bool:
+    let r = Ok(42)
+    return r.contains(99)
+`
+        expectBool(t, runFunc(t, src, "test", nil), false)
+}
+
+func TestResultContainsOnErr(t *testing.T) {
+        src := `
+fn test() -> Bool:
+    let r = Err("fail")
+    return r.contains(42)
+`
+        expectBool(t, runFunc(t, src, "test", nil), false)
+}
+
+func TestResultContainsErr(t *testing.T) {
+        src := `
+fn test() -> Bool:
+    let r = Err("fail")
+    return r.contains_err("fail")
+`
+        expectBool(t, runFunc(t, src, "test", nil), true)
+}
+
+func TestResultContainsErrFalse(t *testing.T) {
+        src := `
+fn test() -> Bool:
+    let r = Err("fail")
+    return r.contains_err("other")
+`
+        expectBool(t, runFunc(t, src, "test", nil), false)
+}
+
+func TestResultContainsErrOnOk(t *testing.T) {
+        src := `
+fn test() -> Bool:
+    let r = Ok(42)
+    return r.contains_err("fail")
+`
+        expectBool(t, runFunc(t, src, "test", nil), false)
+}
+
+func TestResultOrOk(t *testing.T) {
+        src := `
+fn test() -> Int:
+    let r = Ok(1)
+    return r.or(Ok(2)).unwrap()
+`
+        expectInt(t, runFunc(t, src, "test", nil), 1)
+}
+
+func TestResultOrErr(t *testing.T) {
+        src := `
+fn test() -> Int:
+    let r = Err("fail")
+    return r.or(Ok(2)).unwrap()
+`
+        expectInt(t, runFunc(t, src, "test", nil), 2)
+}
+
+func TestResultAndOk(t *testing.T) {
+        src := `
+fn test() -> String:
+    let r = Ok(1)
+    return r.and(Ok("hello")).unwrap()
+`
+        expectString(t, runFunc(t, src, "test", nil), "hello")
+}
+
+func TestResultAndErr(t *testing.T) {
+        src := `
+fn test() -> Bool:
+    let r = Err("fail")
+    return r.and(Ok("hello")).is_err()
+`
+        expectBool(t, runFunc(t, src, "test", nil), true)
+}
+
+func TestResultFlatten(t *testing.T) {
+        src := `
+fn test() -> Int:
+    let r = Ok(Ok(42))
+    return r.flatten().unwrap()
+`
+        expectInt(t, runFunc(t, src, "test", nil), 42)
+}
+
+func TestResultFlattenErr(t *testing.T) {
+        src := `
+fn test() -> Bool:
+    let r = Err("fail")
+    return r.flatten().is_err()
+`
+        expectBool(t, runFunc(t, src, "test", nil), true)
+}
+
+func TestResultToOption(t *testing.T) {
+        src := `
+fn test() -> Int:
+    let r = Ok(42)
+    return r.to_option().unwrap()
+`
+        expectInt(t, runFunc(t, src, "test", nil), 42)
+}
+
+func TestResultToOptionErr(t *testing.T) {
+        src := `
+fn test() -> Bool:
+    let r = Err("fail")
+    return r.to_option().is_none()
+`
+        expectBool(t, runFunc(t, src, "test", nil), true)
+}
+
+func TestResultMapChain(t *testing.T) {
+        src := `
+fn test() -> Int:
+    let r = Ok(5)
+    return r.map(|x| -> x * 2).map(|x| -> x + 1).unwrap()
+`
+        expectInt(t, runFunc(t, src, "test", nil), 11)
+}
+
+func TestResultMonadicComposition(t *testing.T) {
+        src := `
+fn safe_div(a: Int, b: Int) -> Result:
+    if b == 0:
+        return Err("division by zero")
+    return Ok(a / b)
+
+fn test() -> Int:
+    let result = Ok(100).and_then(|x| -> safe_div(x, 5)).and_then(|x| -> safe_div(x, 2))
+    return result.unwrap()
+`
+        expectInt(t, runFunc(t, src, "test", nil), 10)
+}
+
+func TestResultMonadicShortCircuit(t *testing.T) {
+        src := `
+fn safe_div(a: Int, b: Int) -> Result:
+    if b == 0:
+        return Err("division by zero")
+    return Ok(a / b)
+
+fn test() -> Bool:
+    let result = Ok(100).and_then(|x| -> safe_div(x, 0)).and_then(|x| -> safe_div(x, 2))
+    return result.is_err()
+`
+        expectBool(t, runFunc(t, src, "test", nil), true)
+}
+
+// =============================================================================
+// Option/Result Integration Tests
+// =============================================================================
+
+func TestOptionToResultAndBack(t *testing.T) {
+        src := `
+fn test() -> Int:
+    let o = Some(42)
+    let r = o.to_result("no value")
+    let o2 = r.ok()
+    return o2.unwrap()
+`
+        expectInt(t, runFunc(t, src, "test", nil), 42)
+}
+
+func TestResultOkToOptionRoundTrip(t *testing.T) {
+        src := `
+fn test() -> Bool:
+    let r = Err("fail")
+    let o = r.ok()
+    let r2 = o.to_result("still failed")
+    return r2.is_err()
+`
+        expectBool(t, runFunc(t, src, "test", nil), true)
+}
+
+func TestOptionMethodRegistry(t *testing.T) {
+        // Verify option methods are registered
+        if LookupMethod(TypeOption, "is_some") == nil {
+                t.Fatal("expected Option.is_some to be registered")
+        }
+        if LookupMethod(TypeOption, "unwrap") == nil {
+                t.Fatal("expected Option.unwrap to be registered")
+        }
+        if LookupMethod(TypeOption, "map") == nil {
+                t.Fatal("expected Option.map to be registered")
+        }
+        // Verify result methods are registered
+        if LookupMethod(TypeResult, "is_ok") == nil {
+                t.Fatal("expected Result.is_ok to be registered")
+        }
+        if LookupMethod(TypeResult, "unwrap") == nil {
+                t.Fatal("expected Result.unwrap to be registered")
+        }
+        if LookupMethod(TypeResult, "map") == nil {
+                t.Fatal("expected Result.map to be registered")
+        }
+}
