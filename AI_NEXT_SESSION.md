@@ -1,4 +1,4 @@
-# AI Next Session Context — Phase 4.1 Chunk 3
+# AI Next Session Context — Phase 4.1 Chunk 4
 
 > **Purpose:** This file provides complete context for any AI agent (or human developer) to pick up exactly where we left off. Read this before starting any work.
 >
@@ -19,9 +19,10 @@
 | Phase 3+ | String Interpolation, Pipeline Operator (`|>`), Option Chaining (`?.`) | ✅ Complete |
 | Phase 4.1 Chunk 1 | Method Dispatch Infrastructure + String Methods (22 methods) | ✅ Complete |
 | Phase 4.1 Chunk 2 | List Methods (27 methods) | ✅ Complete |
+| Phase 4.1 Chunk 3 | Map Methods (24 methods) | ✅ Complete |
 
-- **Test count:** 338 test functions passing (218 interpreter, 11 lexer, 16 parser, plus checker/symbols/types/formatter)
-- **Language version:** Pre-1.0, Phase 4.1 Chunk 2 complete
+- **Test count:** 379 test functions passing (259 interpreter, 11 lexer, 16 parser, plus checker/symbols/types/formatter)
+- **Language version:** Pre-1.0, Phase 4.1 Chunk 3 complete
 - **Repository:** `github.com/unclebucklarson/aura`
 - **Branch:** `main`
 
@@ -41,88 +42,109 @@
 **List methods (27 methods in `methods_list.go`):**
 `len`, `length`, `append`, `push`, `contains`, `is_empty`, `first`, `last`, `get`, `pop`, `remove`, `reverse`, `slice`, `join`, `index_of`, `map`, `filter`, `reduce`, `for_each`, `flat_map`, `flatten`, `any`, `all`, `count`, `unique`, `sum`, `min`, `max`, `sort`, `zip`, `enumerate`
 
-**Helper functions added in Chunk 2:**
-- `callValue(fn Value, args []Value) Value` — invokes any callable (FunctionVal, LambdaVal, BuiltinFnVal) from method implementations
-- `cmpValues(a, b Value) int` — compares two values for ordering without requiring an AST node
+**Map methods (24 methods in `methods_map.go`):**
+- Size/emptiness: `len`, `length`, `size`, `is_empty`
+- Key/value accessors: `keys`, `values`, `entries`
+- Lookup: `has`, `contains_key`, `contains_value`, `get` (returns Option), `get_or` (with default)
+- Mutation: `set`, `remove` (returns Option of removed value), `delete` (returns Bool), `clear`, `merge`
+- Higher-order: `filter`, `map`, `for_each`, `reduce`, `any`, `all`, `count` (optional predicate)
+- Utility: `to_list`, `find` (returns Option)
 
-**Existing Map methods:** None (Maps exist as `MapVal` but have no methods yet)
+**Helper functions (in `methods_list.go`):**
+- `callValue(fn Value, args []Value) Value` — invokes any callable (FunctionVal, LambdaVal, BuiltinFnVal)
+- `cmpValues(a, b Value) int` — compares two values for ordering
+
+**Helper functions (in `methods_map.go`):**
+- `mapFindKey(m *MapVal, key Value) int` — finds index of key in map, or -1
+
 **Existing Option/Result methods:** None (constructors `Some`, `Ok`, `Err` exist as builtins)
 
 ---
 
 ## What We Just Did (Session Ending 2026-03-20)
 
-1. **Implemented 27 list methods** in `pkg/interpreter/methods_list.go`:
-   - Basic: `len`, `length`, `append`, `push`, `contains`, `is_empty`
-   - Access: `first`, `last`, `get` (returns Option), `pop` (mutating, returns Option), `remove` (mutating)
-   - Transform: `reverse`, `slice` (with negative index support), `join`, `index_of` (returns Option)
-   - Higher-order: `map`, `filter`, `reduce`, `for_each`, `flat_map`, `flatten`
-   - Predicates: `any`, `all`, `count` (optional predicate)
-   - Utilities: `unique`, `sum`, `min` (returns Option), `max` (returns Option), `sort`
-   - Pairing: `zip`, `enumerate`
+1. **Implemented 24 map methods** in `pkg/interpreter/methods_map.go`:
+   - Size: `len`, `length`, `size`, `is_empty`
+   - Accessors: `keys`, `values`, `entries` (returns list of [key, value] lists)
+   - Lookup: `has`, `contains_key`, `contains_value`, `get` (returns Option), `get_or` (with default)
+   - Mutation: `set` (add/update), `remove` (returns Option), `delete` (returns Bool), `clear`, `merge` (overwrites existing keys)
+   - Higher-order: `filter(fn)`, `map(fn)`, `for_each(fn)`, `reduce(init, fn)`, `any(fn)`, `all(fn)`, `count(fn?)`
+   - Utility: `to_list` (alias for entries), `find(fn)` (returns Option of [key, value])
 
-2. **Created `callValue` helper** for invoking Aura callables from Go method implementations
+2. **Created `mapFindKey` helper** for DRY key lookup across map methods
 
-3. **Created `cmpValues` helper** for comparing values in sort/min/max without AST dependency
+3. **Wrote 41 new test functions** in `pkg/interpreter/methods_test.go`:
+   - Individual tests for all map methods
+   - Lambda and named function tests
+   - Method chaining: `filter→map→len`
+   - Empty map operations
+   - Mutation behavior: `set`, `remove`, `delete`, `clear`, `merge` mutate the receiver
+   - Non-mutation: `filter`, `map` return new maps without modifying original
+   - Error handling: `merge` with non-map argument
+   - Edge cases: empty maps, missing keys, vacuous truth for `all` on empty
+   - All 379 tests pass (338 existing + 41 new, zero regressions)
 
-4. **Wrote 52 new test functions** in `pkg/interpreter/methods_test.go`:
-   - Individual method tests for all 27 list methods
-   - Lambda and function reference tests
-   - Method chaining tests (filter→map→sum, sort→map→join, filter→map→reduce)
-   - Edge cases: empty lists, single elements, out-of-bounds, negative indices
-   - Mutation tests: push/pop/remove mutate, reverse/sort do NOT mutate
-   - All 338 tests pass (286 existing + 52 new, zero regressions)
+### Important Design Notes
+
+- **Map field access vs method access:** `MapVal` dot access (`m.foo`) first checks for a string key matching the field name, then falls through to the method registry. This means if a map has a key named `"len"`, `m.len` returns the key's value, not the method. Use `m.len()` through the call path which properly resolves via the method registry.
+- **Insertion order preserved:** All map methods maintain insertion order since `MapVal` uses parallel `Keys` and `Values` slices.
+- **Higher-order map methods pass (key, value):** Unlike list HOFs which pass a single element, map `filter`, `map`, `for_each`, `reduce`, `any`, `all`, `count`, `find` pass both key and value to the callback. `reduce` passes (acc, key, value).
 
 ---
 
-## Next Task: Phase 4.1 Chunk 3 — Map Methods
+## Next Task: Phase 4.1 Chunk 4 — Option/Result Methods
 
 ### Goal
 
-Extend the method registry with comprehensive map methods, building on the same architecture.
+Extend the method registry with Option and Result methods to complete Phase 4.1.
 
-### Map Methods to Implement in `pkg/interpreter/methods_map.go`
+### Option Methods to Implement in `pkg/interpreter/methods_option.go`
 
 | Method | Signature | Description | Notes |
 |--------|-----------|-------------|-------|
-| `len()` | `() -> Int` | Number of key-value pairs | |
-| `length()` | `() -> Int` | Alias for len | |
-| `is_empty()` | `() -> Bool` | Check if map is empty | |
-| `get(key)` | `(K) -> Option[V]` | Safe key access, returns Option | |
-| `set(key, val)` | `(K, V) -> None` | Set key-value pair (mutating) | |
-| `delete(key)` | `(K) -> Bool` | Delete key, return whether existed | |
-| `contains_key(key)` | `(K) -> Bool` | Check if key exists | |
-| `contains_value(val)` | `(V) -> Bool` | Check if value exists | |
-| `keys()` | `() -> List[K]` | Get list of all keys | |
-| `values()` | `() -> List[V]` | Get list of all values | |
-| `entries()` | `() -> List[Tuple(K,V)]` | Get list of (key, value) tuples | |
-| `merge(other)` | `(Map) -> Map` | Merge with another map (returns new) | |
-| `map(fn)` | `(Fn(K,V) -> V) -> Map` | Transform values | |
-| `filter(fn)` | `(Fn(K,V) -> Bool) -> Map` | Filter entries by predicate | |
-| `for_each(fn)` | `(Fn(K,V)) -> None` | Execute fn for each entry | |
+| `is_some()` | `() -> Bool` | Check if Some | |
+| `is_none()` | `() -> Bool` | Check if None | |
+| `unwrap()` | `() -> T` | Get value or panic | |
+| `unwrap_or(default)` | `(T) -> T` | Get value or return default | |
+| `unwrap_or_else(fn)` | `(Fn() -> T) -> T` | Get value or call fn | |
+| `map(fn)` | `(Fn(T) -> U) -> Option[U]` | Transform inner value | |
+| `flat_map(fn)` | `(Fn(T) -> Option[U]) -> Option[U]` | Transform, flatten Option | |
+| `filter(fn)` | `(Fn(T) -> Bool) -> Option[T]` | Keep if predicate true | |
+| `or_else(fn)` | `(Fn() -> Option[T]) -> Option[T]` | Alternative if None | |
+| `and_then(fn)` | `(Fn(T) -> Option[U]) -> Option[U]` | Alias for flat_map | |
+| `expect(msg)` | `(String) -> T` | Get value or panic with message | |
 
-### Key Implementation Notes
+### Result Methods to Implement in `pkg/interpreter/methods_result.go` (or same file)
 
-- `MapVal` uses parallel `Keys []Value` and `Values []Value` slices (insertion-ordered)
-- Use `Equal()` for key comparison (already exists in `value.go`)
-- Follow the same `RegisterMethod(TypeMap, ...)` pattern
-- Create `methods_map.go` with `init()` → `registerMapMethods()`
+| Method | Signature | Description | Notes |
+|--------|-----------|-------------|-------|
+| `is_ok()` | `() -> Bool` | Check if Ok | |
+| `is_err()` | `() -> Bool` | Check if Err | |
+| `unwrap()` | `() -> T` | Get Ok value or panic | |
+| `unwrap_err()` | `() -> E` | Get Err value or panic | |
+| `unwrap_or(default)` | `(T) -> T` | Get Ok value or default | |
+| `unwrap_or_else(fn)` | `(Fn(E) -> T) -> T` | Get Ok or transform Err | |
+| `map(fn)` | `(Fn(T) -> U) -> Result[U,E]` | Transform Ok value | |
+| `map_err(fn)` | `(Fn(E) -> F) -> Result[T,F]` | Transform Err value | |
+| `and_then(fn)` | `(Fn(T) -> Result[U,E]) -> Result[U,E]` | Chain Results | |
+| `or_else(fn)` | `(Fn(E) -> Result[T,F]) -> Result[T,F]` | Alternative on Err | |
+| `ok()` | `() -> Option[T]` | Convert to Option (drops Err) | |
+| `err()` | `() -> Option[E]` | Convert Err to Option | |
 
 ### Testing Target
 
-- 15-20 new test functions for map methods
-- Target total: ~355+ tests
+- 25-35 new test functions
+- Target total: ~410+ tests
 
 ---
 
-## What Comes After (Chunks 4+)
+## What Comes After (Post Phase 4.1)
 
-| Chunk | Scope | Depends On |
-|-------|-------|------------|
-| **Chunk 3:** Map Methods | `get`, `set`, `delete`, `keys`, `values`, `entries`, `contains_key`, `merge`, `map`, `filter` + tests | Chunk 1 (uses same registry) |
-| **Chunk 4:** Option/Result Methods | `unwrap`, `unwrap_or`, `map`, `flat_map`, `is_some`, `is_none`, `is_ok`, `is_err`, `or_else` + tests | Chunk 1 |
+After Chunk 4 → Phase 4.1 (Core Runtime Methods) is complete → move to:
 
-After all 4 chunks → Phase 4.1 complete → move to Import System (Priority 2).
+1. **Import System & Module Resolution** (Phase 4.2 prerequisite)
+2. **Standard Library Foundation** (`std.testing`, `std.json`, `std.io`)
+3. **Effect Runtime** (Phase 4.3)
 
 ---
 
@@ -132,24 +154,27 @@ After all 4 chunks → Phase 4.1 complete → move to Import System (Priority 2)
 
 **Method registration** (established in Chunk 1):
 ```go
-// In methods_list.go init():
-RegisterMethod(TypeList, "map", func(receiver Value, args []Value) Value {
-    list := receiver.(*ListVal)
+RegisterMethod(TypeMap, "get", func(receiver Value, args []Value) Value {
+    m := receiver.(*MapVal)
     // ... implementation
 })
 ```
 
 **Calling Aura functions from Go** (established in Chunk 2):
 ```go
-// callValue invokes any callable (FunctionVal, LambdaVal, BuiltinFnVal)
-result := callValue(fn, []Value{element})
+result := callValue(fn, []Value{key, value})
 ```
 
-**FieldAccess dispatch** in `eval.go`:
+**Map key lookup helper** (established in Chunk 3):
 ```go
-if m := resolveMethod(obj, e.Field); m != nil {
-    return m
-}
+idx := mapFindKey(m, key)
+if idx < 0 { /* not found */ }
+```
+
+**Returning Options** (common pattern for safe access):
+```go
+return &OptionVal{IsSome: true, Val: value}  // Some(value)
+return &OptionVal{IsSome: false}               // None
 ```
 
 **Runtime errors** in method implementations:
@@ -164,16 +189,17 @@ panic(&RuntimeError{Message: "error message"})
 | `pkg/interpreter/methods.go` | Method registry infrastructure |
 | `pkg/interpreter/methods_string.go` | 22 string methods |
 | `pkg/interpreter/methods_list.go` | 27 list methods + `callValue` + `cmpValues` helpers |
-| `pkg/interpreter/methods_test.go` | 92 test functions (40 string + 52 list) |
+| `pkg/interpreter/methods_map.go` | 24 map methods + `mapFindKey` helper |
+| `pkg/interpreter/methods_test.go` | 133 test functions (40 string + 52 list + 41 map) |
 
 ### Running Tests
 
 ```bash
 cd /path/to/aura
-go test ./pkg/interpreter/ -v          # interpreter tests only
-go test ./...                           # all tests (338 passing)
-go test ./pkg/interpreter/ -run TestList  # list method tests only
-go test ./pkg/interpreter/ -run TestMap   # map method tests (Chunk 3)
+go test ./pkg/interpreter/ -v            # interpreter tests only
+go test ./...                             # all tests (379 passing)
+go test ./pkg/interpreter/ -run TestMap   # map method tests only
+go test ./pkg/interpreter/ -run TestOption # option method tests (Chunk 4)
 ```
 
 ---
@@ -185,6 +211,7 @@ go test ./pkg/interpreter/ -run TestMap   # map method tests (Chunk 3)
 | Method registry | `pkg/interpreter/methods.go` |
 | String methods | `pkg/interpreter/methods_string.go` |
 | List methods | `pkg/interpreter/methods_list.go` |
+| Map methods | `pkg/interpreter/methods_map.go` |
 | Method tests | `pkg/interpreter/methods_test.go` |
 | Interpreter source | `pkg/interpreter/eval.go` (main evaluation loop) |
 | Value definitions | `pkg/interpreter/value.go` |

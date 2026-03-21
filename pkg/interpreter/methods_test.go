@@ -1159,3 +1159,529 @@ fn test() -> Int:
 `
         expectInt(t, runFunc(t, src, "test", nil), 3)
 }
+
+
+
+// =============================================================================
+// Map Method Tests
+// =============================================================================
+
+func TestMapLen(t *testing.T) {
+        src := `
+fn test() -> Int:
+    let m = {"a": 1, "b": 2, "c": 3}
+    return m.len()
+`
+        expectInt(t, runFunc(t, src, "test", nil), 3)
+}
+
+func TestMapLenEmpty(t *testing.T) {
+        src := `
+fn test() -> Int:
+    let m = {}
+    return m.len()
+`
+        expectInt(t, runFunc(t, src, "test", nil), 0)
+}
+
+func TestMapLengthAlias(t *testing.T) {
+        src := `
+fn test() -> Int:
+    let m = {"x": 10}
+    return m.length()
+`
+        expectInt(t, runFunc(t, src, "test", nil), 1)
+}
+
+func TestMapSizeAlias(t *testing.T) {
+        src := `
+fn test() -> Int:
+    let m = {"a": 1, "b": 2}
+    return m.size()
+`
+        expectInt(t, runFunc(t, src, "test", nil), 2)
+}
+
+func TestMapIsEmpty(t *testing.T) {
+        src := `
+fn test_empty() -> Bool:
+    let m = {}
+    return m.is_empty()
+
+fn test_not_empty() -> Bool:
+    let m = {"a": 1}
+    return m.is_empty()
+`
+        expectBool(t, runFunc(t, src, "test_empty", nil), true)
+        expectBool(t, runFunc(t, src, "test_not_empty", nil), false)
+}
+
+func TestMapKeys(t *testing.T) {
+        src := `
+fn test() -> Int:
+    let m = {"a": 1, "b": 2, "c": 3}
+    let ks = m.keys()
+    return ks.len()
+`
+        expectInt(t, runFunc(t, src, "test", nil), 3)
+}
+
+func TestMapValues(t *testing.T) {
+        src := `
+fn test() -> Int:
+    let m = {"a": 10, "b": 20}
+    let vs = m.values()
+    return vs.sum()
+`
+        // Values should be 10 and 20 (insertion order)
+        expectInt(t, runFunc(t, src, "test", nil), 30)
+}
+
+func TestMapEntries(t *testing.T) {
+        src := `
+fn test() -> Int:
+    let m = {"a": 10, "b": 20}
+    let es = m.entries()
+    return es.len()
+`
+        expectInt(t, runFunc(t, src, "test", nil), 2)
+}
+
+func TestMapEntriesContent(t *testing.T) {
+        src := `
+fn test() -> Int:
+    let m = {"x": 42}
+    let es = m.entries()
+    match es.get(0):
+        case Some(pair):
+            return pair[1]
+        case _:
+            return -1
+`
+        expectInt(t, runFunc(t, src, "test", nil), 42)
+}
+
+func TestMapHas(t *testing.T) {
+        src := `
+fn test_found() -> Bool:
+    let m = {"a": 1, "b": 2}
+    return m.has("a")
+
+fn test_not_found() -> Bool:
+    let m = {"a": 1, "b": 2}
+    return m.has("z")
+`
+        expectBool(t, runFunc(t, src, "test_found", nil), true)
+        expectBool(t, runFunc(t, src, "test_not_found", nil), false)
+}
+
+func TestMapContainsKey(t *testing.T) {
+        src := `
+fn test() -> Bool:
+    let m = {"a": 1}
+    return m.contains_key("a")
+`
+        expectBool(t, runFunc(t, src, "test", nil), true)
+}
+
+func TestMapContainsValue(t *testing.T) {
+        src := `
+fn test_found() -> Bool:
+    let m = {"a": 1, "b": 2}
+    return m.contains_value(2)
+
+fn test_not_found() -> Bool:
+    let m = {"a": 1, "b": 2}
+    return m.contains_value(99)
+`
+        expectBool(t, runFunc(t, src, "test_found", nil), true)
+        expectBool(t, runFunc(t, src, "test_not_found", nil), false)
+}
+
+func TestMapGet(t *testing.T) {
+        src := `
+fn test_found() -> Int:
+    let m = {"a": 42, "b": 99}
+    match m.get("a"):
+        case Some(v):
+            return v
+        case _:
+            return -1
+
+fn test_missing() -> Int:
+    let m = {"a": 42}
+    match m.get("z"):
+        case Some(v):
+            return v
+        case _:
+            return -1
+`
+        expectInt(t, runFunc(t, src, "test_found", nil), 42)
+        expectInt(t, runFunc(t, src, "test_missing", nil), -1)
+}
+
+func TestMapGetOr(t *testing.T) {
+        src := `
+fn test_found() -> Int:
+    let m = {"a": 42}
+    return m.get_or("a", 0)
+
+fn test_default() -> Int:
+    let m = {"a": 42}
+    return m.get_or("z", 999)
+`
+        expectInt(t, runFunc(t, src, "test_found", nil), 42)
+        expectInt(t, runFunc(t, src, "test_default", nil), 999)
+}
+
+func TestMapSet(t *testing.T) {
+        src := `
+fn test_add() -> Int:
+    let m = {"a": 1}
+    m.set("b", 2)
+    return m.len()
+
+fn test_update() -> Int:
+    let m = {"a": 1}
+    m.set("a", 99)
+    return m["a"]
+`
+        expectInt(t, runFunc(t, src, "test_add", nil), 2)
+        expectInt(t, runFunc(t, src, "test_update", nil), 99)
+}
+
+func TestMapRemove(t *testing.T) {
+        src := `
+fn test_remove_existing() -> Int:
+    let m = {"a": 10, "b": 20}
+    match m.remove("a"):
+        case Some(v):
+            return v
+        case _:
+            return -1
+
+fn test_remove_missing() -> Int:
+    let m = {"a": 10}
+    match m.remove("z"):
+        case Some(v):
+            return v
+        case _:
+            return -1
+
+fn test_remove_shrinks() -> Int:
+    let m = {"a": 10, "b": 20, "c": 30}
+    m.remove("b")
+    return m.len()
+`
+        expectInt(t, runFunc(t, src, "test_remove_existing", nil), 10)
+        expectInt(t, runFunc(t, src, "test_remove_missing", nil), -1)
+        expectInt(t, runFunc(t, src, "test_remove_shrinks", nil), 2)
+}
+
+func TestMapDelete(t *testing.T) {
+        src := `
+fn test_exists() -> Bool:
+    let m = {"a": 1, "b": 2}
+    return m.delete("a")
+
+fn test_not_exists() -> Bool:
+    let m = {"a": 1}
+    return m.delete("z")
+`
+        expectBool(t, runFunc(t, src, "test_exists", nil), true)
+        expectBool(t, runFunc(t, src, "test_not_exists", nil), false)
+}
+
+func TestMapClear(t *testing.T) {
+        src := `
+fn test() -> Int:
+    let m = {"a": 1, "b": 2, "c": 3}
+    m.clear()
+    return m.len()
+`
+        expectInt(t, runFunc(t, src, "test", nil), 0)
+}
+
+func TestMapMerge(t *testing.T) {
+        src := `
+fn test_size() -> Int:
+    let m1 = {"a": 1, "b": 2}
+    let m2 = {"c": 3, "d": 4}
+    m1.merge(m2)
+    return m1.len()
+
+fn test_overwrite() -> Int:
+    let m1 = {"a": 1, "b": 2}
+    let m2 = {"b": 99, "c": 3}
+    m1.merge(m2)
+    return m1["b"]
+`
+        expectInt(t, runFunc(t, src, "test_size", nil), 4)
+        expectInt(t, runFunc(t, src, "test_overwrite", nil), 99)
+}
+
+func TestMapFilter(t *testing.T) {
+        src := `
+fn test() -> Int:
+    let m = {"a": 1, "b": 2, "c": 3, "d": 4}
+    let filtered = m.filter(|k, v| -> v > 2)
+    return filtered.len()
+`
+        expectInt(t, runFunc(t, src, "test", nil), 2)
+}
+
+func TestMapFilterDoesNotMutate(t *testing.T) {
+        src := `
+fn test() -> Int:
+    let m = {"a": 1, "b": 2, "c": 3}
+    let _ = m.filter(|k, v| -> v > 1)
+    return m.len()
+`
+        expectInt(t, runFunc(t, src, "test", nil), 3)
+}
+
+func TestMapMap(t *testing.T) {
+        src := `
+fn test() -> Int:
+    let m = {"a": 1, "b": 2}
+    let doubled = m.map(|k, v| -> v * 2)
+    return doubled["a"]
+`
+        expectInt(t, runFunc(t, src, "test", nil), 2)
+}
+
+func TestMapMapDoesNotMutate(t *testing.T) {
+        src := `
+fn test() -> Int:
+    let m = {"a": 1, "b": 2}
+    let _ = m.map(|k, v| -> v * 10)
+    return m["a"]
+`
+        expectInt(t, runFunc(t, src, "test", nil), 1)
+}
+
+func TestMapForEach(t *testing.T) {
+        // for_each returns None; we test it doesn't crash and iterates all entries
+        src := `
+fn test() -> Int:
+    let m = {"a": 1, "b": 2, "c": 3}
+    m.for_each(|k, v| -> v)
+    return m.len()
+`
+        expectInt(t, runFunc(t, src, "test", nil), 3)
+}
+
+func TestMapReduce(t *testing.T) {
+        src := `
+fn test() -> Int:
+    let m = {"a": 1, "b": 2, "c": 3}
+    return m.reduce(0, |acc, k, v| -> acc + v)
+`
+        expectInt(t, runFunc(t, src, "test", nil), 6)
+}
+
+func TestMapAny(t *testing.T) {
+        src := `
+fn test_true() -> Bool:
+    let m = {"a": 1, "b": 5, "c": 3}
+    return m.any(|k, v| -> v > 4)
+
+fn test_false() -> Bool:
+    let m = {"a": 1, "b": 2}
+    return m.any(|k, v| -> v > 10)
+`
+        expectBool(t, runFunc(t, src, "test_true", nil), true)
+        expectBool(t, runFunc(t, src, "test_false", nil), false)
+}
+
+func TestMapAll(t *testing.T) {
+        src := `
+fn test_true() -> Bool:
+    let m = {"a": 1, "b": 2, "c": 3}
+    return m.all(|k, v| -> v > 0)
+
+fn test_false() -> Bool:
+    let m = {"a": 1, "b": 0, "c": 3}
+    return m.all(|k, v| -> v > 0)
+`
+        expectBool(t, runFunc(t, src, "test_true", nil), true)
+        expectBool(t, runFunc(t, src, "test_false", nil), false)
+}
+
+func TestMapCount(t *testing.T) {
+        src := `
+fn test_no_predicate() -> Int:
+    let m = {"a": 1, "b": 2, "c": 3}
+    return m.count()
+
+fn test_with_predicate() -> Int:
+    let m = {"a": 1, "b": 2, "c": 3, "d": 4}
+    return m.count(|k, v| -> v > 2)
+`
+        expectInt(t, runFunc(t, src, "test_no_predicate", nil), 3)
+        expectInt(t, runFunc(t, src, "test_with_predicate", nil), 2)
+}
+
+func TestMapToList(t *testing.T) {
+        src := `
+fn test() -> Int:
+    let m = {"a": 1, "b": 2}
+    let pairs = m.to_list()
+    return pairs.len()
+`
+        expectInt(t, runFunc(t, src, "test", nil), 2)
+}
+
+func TestMapFind(t *testing.T) {
+        src := `
+fn test_found() -> Int:
+    let m = {"a": 1, "b": 42, "c": 3}
+    match m.find(|k, v| -> v == 42):
+        case Some(pair):
+            return pair[1]
+        case _:
+            return -1
+
+fn test_not_found() -> Int:
+    let m = {"a": 1, "b": 2}
+    match m.find(|k, v| -> v == 99):
+        case Some(pair):
+            return pair[1]
+        case _:
+            return -1
+`
+        expectInt(t, runFunc(t, src, "test_found", nil), 42)
+        expectInt(t, runFunc(t, src, "test_not_found", nil), -1)
+}
+
+func TestMapMethodChaining(t *testing.T) {
+        src := `
+fn test() -> Int:
+    let m = {"a": 1, "b": 2, "c": 3, "d": 4}
+    return m.filter(|k, v| -> v > 1).map(|k, v| -> v * 10).len()
+`
+        expectInt(t, runFunc(t, src, "test", nil), 3)
+}
+
+func TestMapEmptyOperations(t *testing.T) {
+        src := `
+fn test_keys() -> Int:
+    let m = {}
+    return m.keys().len()
+
+fn test_values() -> Int:
+    let m = {}
+    return m.values().len()
+
+fn test_entries() -> Int:
+    let m = {}
+    return m.entries().len()
+
+fn test_filter() -> Int:
+    let m = {}
+    return m.filter(|k, v| -> true).len()
+`
+        expectInt(t, runFunc(t, src, "test_keys", nil), 0)
+        expectInt(t, runFunc(t, src, "test_values", nil), 0)
+        expectInt(t, runFunc(t, src, "test_entries", nil), 0)
+        expectInt(t, runFunc(t, src, "test_filter", nil), 0)
+}
+
+func TestMapSetAndGet(t *testing.T) {
+        src := `
+fn test() -> Int:
+    let m = {}
+    m.set("x", 100)
+    m.set("y", 200)
+    return m.get_or("x", 0) + m.get_or("y", 0)
+`
+        expectInt(t, runFunc(t, src, "test", nil), 300)
+}
+
+func TestMapMergeDoesNotMutateSource(t *testing.T) {
+        src := `
+fn test() -> Int:
+    let m1 = {"a": 1}
+    let m2 = {"b": 2}
+    m1.merge(m2)
+    return m2.len()
+`
+        expectInt(t, runFunc(t, src, "test", nil), 1)
+}
+
+func TestMapWithNamedFunction(t *testing.T) {
+        src := `
+fn big_value(k: String, v: Int) -> Bool:
+    return v >= 10
+
+fn test() -> Int:
+    let m = {"a": 5, "b": 15, "c": 20}
+    return m.filter(big_value).len()
+`
+        expectInt(t, runFunc(t, src, "test", nil), 2)
+}
+
+func TestMapRegistryExists(t *testing.T) {
+        if LookupMethod(TypeMap, "len") == nil {
+                t.Fatal("expected Map.len to be registered")
+        }
+        if LookupMethod(TypeMap, "keys") == nil {
+                t.Fatal("expected Map.keys to be registered")
+        }
+        if LookupMethod(TypeMap, "filter") == nil {
+                t.Fatal("expected Map.filter to be registered")
+        }
+        if LookupMethod(TypeMap, "merge") == nil {
+                t.Fatal("expected Map.merge to be registered")
+        }
+}
+
+func TestMapMergeErrorOnNonMap(t *testing.T) {
+        src := `
+fn test() -> Int:
+    let m = {"a": 1}
+    m.merge([1, 2, 3])
+    return 0
+`
+        expectRuntimeError(t, src, "test", "Map.merge argument must be a Map")
+}
+
+func TestMapReduceStringConcat(t *testing.T) {
+        src := `
+fn test() -> String:
+    let m = {"a": 1, "b": 2}
+    return m.reduce("", |acc, k, v| -> acc + k)
+`
+        // Keys are "a" and "b" in insertion order
+        expectString(t, runFunc(t, src, "test", nil), "ab")
+}
+
+func TestMapClearThenSet(t *testing.T) {
+        src := `
+fn test() -> Int:
+    let m = {"a": 1, "b": 2}
+    m.clear()
+    m.set("x", 42)
+    return m.len()
+`
+        expectInt(t, runFunc(t, src, "test", nil), 1)
+}
+
+func TestMapAnyOnEmpty(t *testing.T) {
+        src := `
+fn test() -> Bool:
+    let m = {}
+    return m.any(|k, v| -> true)
+`
+        expectBool(t, runFunc(t, src, "test", nil), false)
+}
+
+func TestMapAllOnEmpty(t *testing.T) {
+        src := `
+fn test() -> Bool:
+    let m = {}
+    return m.all(|k, v| -> false)
+`
+        // all on empty is vacuously true
+        expectBool(t, runFunc(t, src, "test", nil), true)
+}
