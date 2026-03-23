@@ -1,6 +1,6 @@
 # AI Next Session - Aura Language
 
-## Status: Phase 3.1.1 COMPLETE ✅ — Tuple Literal Syntax
+## Status: Phase 3.1.1 MERGED ✅ — Ready for Phase 3.2 (Pattern Matching)
 
 **Version:** v0.8.1
 **Total Tests:** 905 (all passing)
@@ -85,9 +85,9 @@ Standard Library Modules (17 total):
 
 ---
 
-## ✅ COMPLETED — Phase 3.1.1: Tuple Literal Syntax (v0.8.1)
+## ✅ MERGED — Phase 3.1.1: Tuple Literal Syntax (v0.8.1)
 
-> Completed 2026-03-23. All acceptance criteria met.
+> Completed 2026-03-23. PR #3 merged to main 2026-03-23. Branch deleted.
 
 ### What Was Delivered
 
@@ -122,9 +122,30 @@ Standard Library Modules (17 total):
 
 > **⚡ START HERE for the next session.**
 >
-> With tuples complete, pattern matching can now leverage tuple destructuring.
+> PR #3 merged. Main is clean with 905 tests passing on v0.8.1.
 > Phase 3.2 enhances the existing `match` statement with exhaustiveness checking,
 > nested patterns, guard clauses, and full destructuring support.
+>
+> **Planning document:** `/home/ubuntu/phase_3_2_plan.md`
+
+### Phase 3.2 Chunks (4 chunks, 2–3 weeks)
+
+| Chunk | Focus | Effort | Tests |
+|-------|-------|--------|-------|
+| **1** | Core infrastructure + Literal/Variable/Wildcard patterns | 3–4 days | ~25–30 |
+| **2** | Tuple, List & Constructor patterns (Option/Result) | 3–4 days | ~25–30 |
+| **3** | Guard clauses, Or-patterns, Binding patterns | 2–3 days | ~15–20 |
+| **4** | Exhaustiveness checking & documentation | 3–4 days | ~15–20 |
+
+### Key Files to Create/Modify
+- `pkg/ast/ast.go` — New pattern + match AST nodes
+- `pkg/parser/parser.go` — Match expression + pattern parsing
+- `pkg/interpreter/eval.go` — Match expression evaluation
+- `pkg/interpreter/pattern.go` — **NEW** Pattern matching engine
+- `pkg/interpreter/pattern_test.go` — **NEW** Pattern matching tests
+- `pkg/checker/exhaustive.go` — **NEW** Exhaustiveness analysis
+
+### Target: v0.9.0, ~1,000+ total tests
 
 ---
 
