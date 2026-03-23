@@ -1,119 +1,84 @@
-# AI Next Session - Aura Language Project
+# AI Next Session — Aura Project Status
 
-## Current Status: Phase 4.3 Chunk 1 COMPLETE ✅
+## Current Status: Phase 4.3 Chunk 2 COMPLETE
 
-**Date:** March 22, 2026  
-**Total Tests:** 552 passing (interpreter) + all other packages passing  
-**New Tests Added:** 48 (Phase 4.3 Chunk 1 — effect system + std.file)
+### Test Metrics
+- **Total interpreter tests: 619** (66 new in this chunk)
+- All tests passing ✅
 
----
+### What Was Completed (Chunk 2)
 
-## Phase 4.3 Chunk 1 Completion Summary
+#### Effect System Extensions (effect.go)
+- **TimeProvider interface**: Now(), NowNano(), Sleep(ms)
+- **EnvProvider interface**: Get(), Set(), Has(), List(), Cwd(), Args()
+- **RealTimeProvider**: Uses Go's `time` package
+- **RealEnvProvider**: Uses Go's `os` package
+- **MockTimeProvider**: Controllable time, sleep logging, time advancement
+- **MockEnvProvider**: In-memory environment, configurable cwd/args
+- **EffectContext updates**: Added Time() and Env() accessors, WithTime(), WithEnv()
 
-### Effect System Foundation
+#### std.time Module (stdlib_time.go) — 8 functions
+- `now()` → Int — Current Unix timestamp
+- `unix()` → Int — Alias for now()
+- `millis()` → Int — Current time in milliseconds
+- `sleep(ms)` → None — Sleep for milliseconds
+- `format(timestamp, format)` → String — Format timestamp
+- `parse(str, format)` → Result[Int, String] — Parse timestamp
+- `add(timestamp, seconds)` → Int — Add seconds
+- `diff(ts1, ts2)` → Int — Difference in seconds
+- Aura format tokens: %Y, %m, %d, %H, %M, %S, %Z
 
-The effect system implements Aura's "Effects as Capabilities" philosophy from AI_MISSION.md. Key components:
+#### std.env Module (stdlib_env.go) — 6 functions
+- `get(key)` → Option[String] — Get environment variable
+- `set(key, value)` → None — Set environment variable
+- `has(key)` → Bool — Check existence
+- `list()` → Map[String, String] — All variables
+- `cwd()` → String — Current working directory
+- `args()` → List[String] — Command line arguments
 
-- **EffectContext** — Container for all effect capability providers, threaded through the interpreter
-- **FileProvider interface** — Defines 9 file system operations (read, write, append, exists, delete, list_dir, create_dir, is_file, is_dir)
-- **RealFileProvider** — Production implementation using Go's `os` package
-- **MockFileProvider** — In-memory filesystem for deterministic testing
-- **Effect injection** — `NewWithEffects()` and `NewWithResolverAndEffects()` constructors for mock injection
+#### Test Coverage (time_env_test.go) — 66 tests
+- TimeProvider tests (Real and Mock): 11 tests
+- EnvProvider tests (Real and Mock): 13 tests
+- EffectContext integration: 6 tests
+- std.time function tests: 17 tests
+- std.env function tests: 14 tests
+- Format/parse roundtrip tests: 2 tests
+- Integration tests: 3 tests
 
-### std.file Module (9 functions)
+### Files Modified
+1. `pkg/interpreter/effect.go` — Added TimeProvider, EnvProvider interfaces + Real/Mock implementations
+2. `pkg/interpreter/interpreter.go` — Registered std.time and std.env modules
+3. `user_docs/method_reference.md` — Added std.time and std.env documentation
 
-| Function | Args | Returns | Description |
-|----------|------|---------|-------------|
-| `read` | `(path: String)` | `Result[String, String]` | Read entire file contents |
-| `write` | `(path: String, content: String)` | `Result[None, String]` | Write content to file |
-| `append` | `(path: String, content: String)` | `Result[None, String]` | Append content to file |
-| `exists` | `(path: String)` | `Bool` | Check if path exists |
-| `delete` | `(path: String)` | `Result[None, String]` | Delete file or empty directory |
-| `list_dir` | `(path: String)` | `Result[List[String], String]` | List directory entry names |
-| `create_dir` | `(path: String)` | `Result[None, String]` | Create directory with parents |
-| `is_file` | `(path: String)` | `Bool` | Check if path is a regular file |
-| `is_dir` | `(path: String)` | `Bool` | Check if path is a directory |
+### Files Created
+1. `pkg/interpreter/stdlib_time.go` — std.time module (8 functions)
+2. `pkg/interpreter/stdlib_env.go` — std.env module (6 functions)
+3. `pkg/interpreter/time_env_test.go` — 66 tests
 
-### Complete Standard Library (13 modules, 57 functions)
+### Previous Completions
+- **Chunk 1**: Effect system foundation + std.file (9 functions, 48 tests)
+- **Phases 1-3**: Core language, parser, lexer, token system
+- **Phase 4.1**: 108+ methods (String, List, Map, Option, Result)
+- **Phase 4.2**: Import system + 13 stdlib modules
 
-Previously existing (12 modules, 48 functions):
-- `std.math` — Mathematical functions and constants (8 functions + 4 constants)
-- `std.string` — String utilities (4 functions)
-- `std.io` — I/O functions (3 functions)
-- `std.testing` — Testing framework (11 functions)
-- `std.json` — JSON parse/stringify (2 functions)
-- `std.regex` — Regular expressions (6 functions)
-- `std.collections` — Collection utilities (9 functions)
-- `std.random` — Random number generation (6 functions)
-- `std.format` — String formatting (7 functions)
-- `std.result` — Result utilities (5 functions)
-- `std.option` — Option utilities (5 functions)
-- `std.iter` — Iterator utilities (5 functions)
+### Recommended Next Steps
+1. **Phase 4.3 Chunk 3**: Effect composition and advanced mocking framework
+2. **Phase 4.3 Chunk 4**: std.net + std.log modules
+3. **Phase 5**: Type system enhancements
 
-New in Phase 4.3 Chunk 1:
-- `std.file` — File system operations via effect system (9 functions)
+### Architecture Notes — Effect System Pattern
+```
+Interpreter
+  └── EffectContext
+        ├── FileProvider  (Real: os.* | Mock: in-memory)
+        ├── TimeProvider  (Real: time.* | Mock: controllable clock)
+        └── EnvProvider   (Real: os.* | Mock: in-memory env)
+```
 
-### Files Created/Modified
-- `pkg/interpreter/effect.go` (new — effect system infrastructure)
-- `pkg/interpreter/stdlib_file.go` (new — std.file module)
-- `pkg/interpreter/effect_test.go` (new — 48 tests)
-- `pkg/interpreter/interpreter.go` (modified — effect context integration, new constructors)
-- `user_docs/method_reference.md` (updated with std.file documentation)
-- `AI_NEXT_SESSION.md` (this file)
-
----
-
-## Recommended Next Steps
-
-### Phase 4.3 Chunk 2: std.time + std.env
-- TimeProvider interface and implementation
-- `std.time` module (now, format, parse, duration operations)
-- `std.env` module (get, set, list environment variables)
-- EnvProvider interface with mock support
-
-### Phase 4.3 Chunk 3: Effect Composition + Mocking Framework
-- `with_effects` block for injecting mock providers in Aura code
-- Effect handler composition patterns
-- Integration with `std.testing` for mock assertions
-
-### Phase 4.3 Chunk 4: std.net + std.log
-- NetProvider for HTTP client operations (get, post, etc.)
-- LogProvider for structured logging
-- Both with full mock support
-
-### Phase 5.1: REPL Enhancements
-- Syntax highlighting, auto-completion, history persistence
-
-### Phase 5.2: Documentation Generator
-- Generate docs from source annotations
-
-### Phase 5.3: AI Integration Pipeline
-- Spec-to-implementation generation
-
----
-
-## Architecture Notes
-
-### Effect System Pattern
-The effect system follows a consistent pattern:
-1. Define a **Provider interface** in `effect.go` (e.g., `FileProvider`)
-2. Implement **RealProvider** using Go standard library (e.g., `RealFileProvider`)
-3. Implement **MockProvider** with in-memory state (e.g., `MockFileProvider`)
-4. Store providers in `EffectContext`, accessible via `interp.effects`
-5. Create stdlib module that captures the provider via closure (e.g., `createStdFileExports(fp)`)
-6. Register in `interpreter.go`'s `createStdModule()` switch
-
-### Stdlib Module Pattern (unchanged)
-All stdlib modules follow the same pattern:
-1. Create `createStd<Name>Exports() map[string]Value` function
-2. Register in `interpreter.go` `createStdModule()` switch
-3. All functions are `BuiltinFnVal` with proper error messages
-4. Effect-based modules receive their provider as a parameter
-5. Tests call export functions directly from Go for isolation
-
-### Test Organization
-- `effect_test.go` — Phase 4.3 Chunk 1 tests (48 tests)
-- `stdlib_complete_test.go` — Phase 4.2 Chunk 3 tests (65 tests)
-- `import_advanced_test.go` — Phase 4.2 Chunk 2 tests (64 tests)
-- `methods_test.go` — Phase 4.1 method tests
-- `interpreter_test.go` — Core interpreter tests
+Each provider:
+- Has a Go interface defining operations
+- Has a Real implementation (production)
+- Has a Mock implementation (testing)
+- Is injected via EffectContext
+- Is captured by closure in stdlib module factory functions
+- Total stdlib functions: 71 across 15 modules

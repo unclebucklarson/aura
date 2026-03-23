@@ -1,9 +1,9 @@
 # Aura Method Reference
 
-> **Version:** 0.6.0 (Phase 4.3 — Effect System + std.file)
-> **Total Methods:** 108+ built-in methods + 57 stdlib functions  
+> **Version:** 0.6.1 (Phase 4.3 — Effect System + std.file + std.time + std.env)
+> **Total Methods:** 108+ built-in methods + 71 stdlib functions  
 > **Types Covered:** String (22) · List (27) · Map (24) · Option (17) · Result (18)  
-> **Stdlib Modules:** math · string · io · testing · json · regex · collections · random · format · result · option · iter · file
+> **Stdlib Modules:** math · string · io · testing · json · regex · collections · random · format · result · option · iter · file · time · env
 
 ---
 
@@ -1484,3 +1484,94 @@ match entries:
 | `create_dir` | `(path: String)` | `Result[None, String]` | Create directory (with parents) |
 | `is_file` | `(path: String)` | `Bool` | Check if path is a regular file |
 | `is_dir` | `(path: String)` | `Bool` | Check if path is a directory |
+
+
+---
+
+## std.time — Time Operations (Effect-Based)
+
+> **Effect:** `time` — Requires TimeProvider capability. Mockable for deterministic tests.
+
+The `std.time` module provides time-related operations through Aura's effect system. The time provider can be replaced with a mock for deterministic, reproducible testing.
+
+```aura
+import std.time
+```
+
+#### Example Usage
+
+```aura
+import std.time
+
+let now = time.now()           // Current Unix timestamp (seconds)
+let ms = time.millis()          // Current time in milliseconds
+time.sleep(100)                 // Sleep for 100ms
+
+let formatted = time.format(now, "%Y-%m-%d %H:%M:%S")
+let parsed = time.parse("2023-11-14 22:13:20", "%Y-%m-%d %H:%M:%S")
+
+let future = time.add(now, 3600)   // Add 1 hour
+let elapsed = time.diff(future, now)  // Difference in seconds
+```
+
+#### Format Tokens
+
+| Token | Meaning | Example |
+|-------|---------|---------|
+| `%Y` | 4-digit year | `2023` |
+| `%m` | 2-digit month | `01`–`12` |
+| `%d` | 2-digit day | `01`–`31` |
+| `%H` | 2-digit hour (24h) | `00`–`23` |
+| `%M` | 2-digit minute | `00`–`59` |
+| `%S` | 2-digit second | `00`–`59` |
+| `%Z` | Timezone abbreviation | `UTC` |
+
+#### Functions
+
+| Function | Args | Returns | Description |
+|----------|------|---------|-------------|
+| `now` | `()` | `Int` | Current Unix timestamp in seconds |
+| `unix` | `()` | `Int` | Alias for `now()` |
+| `millis` | `()` | `Int` | Current time in milliseconds |
+| `sleep` | `(ms: Int)` | `None` | Sleep for milliseconds |
+| `format` | `(timestamp: Int, format: String)` | `String` | Format timestamp to string |
+| `parse` | `(str: String, format: String)` | `Result[Int, String]` | Parse string to timestamp |
+| `add` | `(timestamp: Int, seconds: Int)` | `Int` | Add seconds to timestamp |
+| `diff` | `(ts1: Int, ts2: Int)` | `Int` | Difference in seconds (ts1 - ts2) |
+
+---
+
+## std.env — Environment Variables (Effect-Based)
+
+> **Effect:** `env` — Requires EnvProvider capability. Mockable for isolated tests.
+
+The `std.env` module provides access to environment variables, working directory, and command-line arguments through Aura's effect system. The env provider can be replaced with a mock for deterministic testing.
+
+```aura
+import std.env
+```
+
+#### Example Usage
+
+```aura
+import std.env
+
+let home = env.get("HOME")      // Option[String]
+env.set("APP_MODE", "production")
+let exists = env.has("PATH")    // Bool
+
+let vars = env.list()           // Map[String, String]
+let cwd = env.cwd()             // String
+let args = env.args()           // List[String]
+```
+
+#### Functions
+
+| Function | Args | Returns | Description |
+|----------|------|---------|-------------|
+| `get` | `(key: String)` | `Option[String]` | Get environment variable |
+| `set` | `(key: String, value: String)` | `None` | Set environment variable |
+| `has` | `(key: String)` | `Bool` | Check if variable exists |
+| `list` | `()` | `Map[String, String]` | List all environment variables |
+| `cwd` | `()` | `String` | Current working directory |
+| `args` | `()` | `List[String]` | Command line arguments |

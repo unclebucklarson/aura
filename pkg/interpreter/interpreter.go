@@ -594,6 +594,12 @@ func (interp *Interpreter) createStdModule(importPath string) *ModuleVal {
         case "std.file":
                 exports = createStdFileExports(interp.effects.File())
 
+        case "std.time":
+                exports = createStdTimeExports(interp.effects.Time())
+
+        case "std.env":
+                exports = createStdEnvExports(interp.effects.Env())
+
         default:
                 return nil
         }
