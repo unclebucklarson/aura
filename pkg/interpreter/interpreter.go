@@ -2,22 +2,39 @@ package interpreter
 
 import (
         "fmt"
+        "path/filepath"
+        "strings"
 
         "github.com/unclebucklarson/aura/pkg/ast"
+        "github.com/unclebucklarson/aura/pkg/module"
         "github.com/unclebucklarson/aura/pkg/token"
 )
 
 // Interpreter executes an Aura module.
 type Interpreter struct {
-        module *ast.Module
-        env    *Environment
+        module   *ast.Module
+        env      *Environment
+        resolver *module.Resolver
+        filePath string // path of the source file being interpreted
 }
 
 // New creates a new interpreter for the given module.
-func New(module *ast.Module) *Interpreter {
+func New(mod *ast.Module) *Interpreter {
         interp := &Interpreter{
-                module: module,
+                module: mod,
                 env:    NewEnvironment(),
+        }
+        interp.registerBuiltins()
+        return interp
+}
+
+// NewWithResolver creates an interpreter with a module resolver for import support.
+func NewWithResolver(mod *ast.Module, filePath string, resolver *module.Resolver) *Interpreter {
+        interp := &Interpreter{
+                module:   mod,
+                env:      NewEnvironment(),
+                resolver: resolver,
+                filePath: filePath,
         }
         interp.registerBuiltins()
         return interp
@@ -345,6 +362,11 @@ func (interp *Interpreter) Run() (result Value, err error) {
 
         result = &NoneVal{}
 
+        // Process imports first
+        if err := interp.processImports(); err != nil {
+                return nil, err
+        }
+
         // First pass: register all type definitions, functions, constants, enums
         for _, item := range interp.module.Items {
                 switch it := item.(type) {
@@ -431,4 +453,238 @@ func (interp *Interpreter) RunFunction(name string, args []Value) (result Value,
 // Env returns the interpreter's environment (for testing/REPL).
 func (interp *Interpreter) Env() *Environment {
         return interp.env
+}
+
+// processImports handles all import statements in the module.
+func (interp *Interpreter) processImports() error {
+        if interp.module.Imports == nil || len(interp.module.Imports) == 0 {
+                return nil
+        }
+
+        if interp.resolver == nil {
+                return fmt.Errorf("import statements require a module resolver (use NewWithResolver)")
+        }
+
+        fromDir := "."
+        if interp.filePath != "" {
+                fromDir = filepath.Dir(interp.filePath)
+        }
+
+        for _, imp := range interp.module.Imports {
+                importPath := imp.Path.String()
+
+                // Check for standard library imports
+                if module.IsStdLib(importPath) {
+                        if err := interp.processStdImport(imp, importPath); err != nil {
+                                return err
+                        }
+                        continue
+                }
+
+                // Resolve the module
+                cached, err := interp.resolver.Resolve(importPath, fromDir)
+                if err != nil {
+                        return err
+                }
+
+                // Load and execute the module to get its exports
+                modVal, err := interp.loadModuleValue(cached, importPath)
+                if err != nil {
+                        return err
+                }
+
+                // Bind the module into the current environment
+                if err := interp.bindImport(imp, modVal); err != nil {
+                        return err
+                }
+        }
+
+        return nil
+}
+
+// processStdImport handles standard library imports.
+func (interp *Interpreter) processStdImport(imp *ast.ImportNode, importPath string) error {
+        modVal := interp.createStdModule(importPath)
+        if modVal == nil {
+                return fmt.Errorf("unknown standard library module: '%s'", importPath)
+        }
+        return interp.bindImport(imp, modVal)
+}
+
+// createStdModule creates a ModuleVal for a standard library module.
+func (interp *Interpreter) createStdModule(importPath string) *ModuleVal {
+        parts := strings.Split(importPath, ".")
+        if len(parts) < 2 || parts[0] != "std" {
+                return nil
+        }
+
+        modName := parts[len(parts)-1]
+        exports := make(map[string]Value)
+
+        switch importPath {
+        case "std.math":
+                exports["pi"] = &FloatVal{Val: 3.141592653589793}
+                exports["e"] = &FloatVal{Val: 2.718281828459045}
+                exports["abs"] = &BuiltinFnVal{
+                        Name: "math.abs",
+                        Fn: func(args []Value) Value {
+                                if len(args) != 1 {
+                                        panic(&RuntimeError{Message: "math.abs() requires exactly one argument"})
+                                }
+                                switch v := args[0].(type) {
+                                case *IntVal:
+                                        if v.Val < 0 {
+                                                return &IntVal{Val: -v.Val}
+                                        }
+                                        return v
+                                case *FloatVal:
+                                        if v.Val < 0 {
+                                                return &FloatVal{Val: -v.Val}
+                                        }
+                                        return v
+                                default:
+                                        panic(&RuntimeError{Message: fmt.Sprintf("math.abs() not supported for %s", valueTypeNames[args[0].Type()])})
+                                }
+                        },
+                }
+                exports["max"] = &BuiltinFnVal{
+                        Name: "math.max",
+                        Fn: func(args []Value) Value {
+                                if len(args) < 2 {
+                                        panic(&RuntimeError{Message: "math.max() requires at least 2 arguments"})
+                                }
+                                result := args[0]
+                                for _, a := range args[1:] {
+                                        if compareRaw(a, result) > 0 {
+                                                result = a
+                                        }
+                                }
+                                return result
+                        },
+                }
+                exports["min"] = &BuiltinFnVal{
+                        Name: "math.min",
+                        Fn: func(args []Value) Value {
+                                if len(args) < 2 {
+                                        panic(&RuntimeError{Message: "math.min() requires at least 2 arguments"})
+                                }
+                                result := args[0]
+                                for _, a := range args[1:] {
+                                        if compareRaw(a, result) < 0 {
+                                                result = a
+                                        }
+                                }
+                                return result
+                        },
+                }
+
+        case "std.string":
+                exports["join"] = &BuiltinFnVal{
+                        Name: "string.join",
+                        Fn: func(args []Value) Value {
+                                if len(args) != 2 {
+                                        panic(&RuntimeError{Message: "string.join() requires 2 arguments (list, separator)"})
+                                }
+                                list, ok := args[0].(*ListVal)
+                                if !ok {
+                                        panic(&RuntimeError{Message: "string.join() first argument must be a list"})
+                                }
+                                sep, ok := args[1].(*StringVal)
+                                if !ok {
+                                        panic(&RuntimeError{Message: "string.join() second argument must be a string"})
+                                }
+                                parts := make([]string, len(list.Elements))
+                                for i, el := range list.Elements {
+                                        parts[i] = el.String()
+                                }
+                                return &StringVal{Val: joinStrings(parts, sep.Val)}
+                        },
+                }
+
+        case "std.io":
+                exports["print"] = &BuiltinFnVal{
+                        Name: "io.print",
+                        Fn: func(args []Value) Value {
+                                parts := make([]string, len(args))
+                                for i, a := range args {
+                                        parts[i] = a.String()
+                                }
+                                fmt.Println(joinStrings(parts, " "))
+                                return &NoneVal{}
+                        },
+                }
+
+        default:
+                return nil
+        }
+
+        return &ModuleVal{
+                Name:    modName,
+                Path:    importPath,
+                Exports: exports,
+        }
+}
+
+// loadModuleValue executes a cached module and returns a ModuleVal with its exports.
+func (interp *Interpreter) loadModuleValue(cached *module.CachedModule, importPath string) (*ModuleVal, error) {
+        if cached.AST == nil {
+                return nil, fmt.Errorf("module '%s' has no AST (internal error)", importPath)
+        }
+
+        // Create a child interpreter for the imported module
+        childInterp := NewWithResolver(cached.AST, cached.Path, interp.resolver)
+
+        // Execute the module's top-level items
+        if _, err := childInterp.Run(); err != nil {
+                return nil, fmt.Errorf("error executing module '%s': %v", importPath, err)
+        }
+
+        // Collect exports
+        modName := module.GetModuleName(importPath)
+        exports := make(map[string]Value)
+
+        for name := range cached.Exports {
+                if val, ok := childInterp.env.Get(name); ok {
+                        exports[name] = val
+                }
+        }
+
+        return &ModuleVal{
+                Name:    modName,
+                Path:    cached.Path,
+                Exports: exports,
+        }, nil
+}
+
+// bindImport binds a module's exports into the current environment.
+func (interp *Interpreter) bindImport(imp *ast.ImportNode, modVal *ModuleVal) error {
+        importPath := imp.Path.String()
+
+        if imp.Names != nil {
+                // "from X import a, b" or "from X import *"
+                if len(imp.Names) == 1 && imp.Names[0] == "*" {
+                        // Wildcard import: bind all exports directly
+                        for name, val := range modVal.Exports {
+                                interp.env.DefineConst(name, val)
+                        }
+                } else {
+                        // Named imports: bind specific symbols
+                        for _, name := range imp.Names {
+                                val, ok := modVal.Exports[name]
+                                if !ok {
+                                        return fmt.Errorf("module '%s' does not export '%s'", importPath, name)
+                                }
+                                interp.env.DefineConst(name, val)
+                        }
+                }
+        } else if imp.Alias != "" {
+                // "import X as Y": bind module under alias
+                interp.env.DefineConst(imp.Alias, modVal)
+        } else {
+                // "import X": bind module under its name
+                modName := module.GetModuleName(importPath)
+                interp.env.DefineConst(modName, modVal)
+        }
+
+        return nil
 }

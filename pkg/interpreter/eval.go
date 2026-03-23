@@ -540,6 +540,12 @@ func evalFieldAccess(e *ast.FieldAccess, env *Environment) Value {
         obj := EvalExpr(e.Object, env)
 
         switch v := obj.(type) {
+        case *ModuleVal:
+                val, ok := v.GetExport(e.Field)
+                if !ok {
+                        runtimePanic(e.Span, "module '%s' has no export '%s'", v.Name, e.Field)
+                }
+                return val
         case *StructVal:
                 val, ok := v.Fields[e.Field]
                 if !ok {
