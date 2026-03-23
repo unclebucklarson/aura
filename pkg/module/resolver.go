@@ -13,6 +13,16 @@ import (
 	"github.com/unclebucklarson/aura/pkg/parser"
 )
 
+// InitState tracks the initialization state of a module.
+type InitState int
+
+const (
+	InitNone       InitState = iota // Not yet initialized
+	InitInProgress                  // Currently being initialized
+	InitComplete                    // Initialization done
+	InitError                       // Initialization failed
+)
+
 // Resolver handles module path resolution and caching.
 type Resolver struct {
 	// searchPaths are directories to search for modules
@@ -21,13 +31,17 @@ type Resolver struct {
 	cache map[string]*CachedModule
 	// loading tracks modules currently being loaded (circular dependency detection)
 	loading map[string]bool
-	mu      sync.Mutex
+	// loadStack tracks the import chain for better error messages
+	loadStack []string
+	// initState tracks initialization state per module
+	initState map[string]InitState
+	mu        sync.Mutex
 }
 
 // CachedModule represents a parsed and cached module.
 type CachedModule struct {
-	Path   string      // resolved file path
-	AST    *ast.Module // parsed AST
+	Path    string          // resolved file path
+	AST     *ast.Module     // parsed AST
 	Exports map[string]bool // exported symbol names
 }
 
@@ -48,6 +62,8 @@ func NewResolver(basePath string) *Resolver {
 		searchPaths: []string{basePath},
 		cache:       make(map[string]*CachedModule),
 		loading:     make(map[string]bool),
+		loadStack:   nil,
+		initState:   make(map[string]InitState),
 	}
 }
 
@@ -74,17 +90,24 @@ func (r *Resolver) Resolve(importPath string, fromDir string) (*CachedModule, er
 		return cached, nil
 	}
 
-	// Check for circular dependency
+	// Check for circular dependency with detailed path
 	if r.loading[filePath] {
+		cyclePath := r.buildCyclePath(filePath)
 		return nil, &ResolveError{
-			Message: fmt.Sprintf("circular dependency detected"),
+			Message: fmt.Sprintf("circular dependency detected: %s", cyclePath),
 			Path:    importPath,
 		}
 	}
 
-	// Mark as loading
+	// Mark as loading and push to stack
 	r.loading[filePath] = true
-	defer func() { delete(r.loading, filePath) }()
+	r.loadStack = append(r.loadStack, filePath)
+	defer func() {
+		delete(r.loading, filePath)
+		if len(r.loadStack) > 0 {
+			r.loadStack = r.loadStack[:len(r.loadStack)-1]
+		}
+	}()
 
 	// Read and parse the file
 	cached, err := r.loadModule(filePath)
@@ -95,6 +118,45 @@ func (r *Resolver) Resolve(importPath string, fromDir string) (*CachedModule, er
 	// Cache the result
 	r.cache[filePath] = cached
 	return cached, nil
+}
+
+// buildCyclePath builds a human-readable cycle path string.
+func (r *Resolver) buildCyclePath(target string) string {
+	parts := make([]string, 0, len(r.loadStack)+1)
+	inCycle := false
+	for _, p := range r.loadStack {
+		if p == target {
+			inCycle = true
+		}
+		if inCycle {
+			parts = append(parts, pathToName(p))
+		}
+	}
+	parts = append(parts, pathToName(target))
+	return strings.Join(parts, " -> ")
+}
+
+// pathToName extracts a readable name from a file path.
+func pathToName(p string) string {
+	if strings.HasPrefix(p, "@std/") {
+		return strings.TrimPrefix(p, "@std/")
+	}
+	base := filepath.Base(p)
+	return strings.TrimSuffix(base, ".aura")
+}
+
+// GetInitState returns the initialization state of a module.
+func (r *Resolver) GetInitState(filePath string) InitState {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.initState[filePath]
+}
+
+// SetInitState sets the initialization state of a module.
+func (r *Resolver) SetInitState(filePath string, state InitState) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.initState[filePath] = state
 }
 
 // resolveFilePath converts an import path to an absolute file path.
@@ -342,4 +404,16 @@ func (r *Resolver) IsCached(importPath string, fromDir string) bool {
 // CacheCount returns the number of cached modules.
 func (r *Resolver) CacheCount() int {
 	return len(r.cache)
+}
+
+// GetDependencies extracts import paths from a module's AST.
+func GetDependencies(mod *ast.Module) []string {
+	if mod == nil || mod.Imports == nil {
+		return nil
+	}
+	deps := make([]string, 0, len(mod.Imports))
+	for _, imp := range mod.Imports {
+		deps = append(deps, imp.Path.String())
+	}
+	return deps
 }

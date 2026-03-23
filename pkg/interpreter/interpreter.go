@@ -523,96 +523,19 @@ func (interp *Interpreter) createStdModule(importPath string) *ModuleVal {
 
         switch importPath {
         case "std.math":
-                exports["pi"] = &FloatVal{Val: 3.141592653589793}
-                exports["e"] = &FloatVal{Val: 2.718281828459045}
-                exports["abs"] = &BuiltinFnVal{
-                        Name: "math.abs",
-                        Fn: func(args []Value) Value {
-                                if len(args) != 1 {
-                                        panic(&RuntimeError{Message: "math.abs() requires exactly one argument"})
-                                }
-                                switch v := args[0].(type) {
-                                case *IntVal:
-                                        if v.Val < 0 {
-                                                return &IntVal{Val: -v.Val}
-                                        }
-                                        return v
-                                case *FloatVal:
-                                        if v.Val < 0 {
-                                                return &FloatVal{Val: -v.Val}
-                                        }
-                                        return v
-                                default:
-                                        panic(&RuntimeError{Message: fmt.Sprintf("math.abs() not supported for %s", valueTypeNames[args[0].Type()])})
-                                }
-                        },
-                }
-                exports["max"] = &BuiltinFnVal{
-                        Name: "math.max",
-                        Fn: func(args []Value) Value {
-                                if len(args) < 2 {
-                                        panic(&RuntimeError{Message: "math.max() requires at least 2 arguments"})
-                                }
-                                result := args[0]
-                                for _, a := range args[1:] {
-                                        if compareRaw(a, result) > 0 {
-                                                result = a
-                                        }
-                                }
-                                return result
-                        },
-                }
-                exports["min"] = &BuiltinFnVal{
-                        Name: "math.min",
-                        Fn: func(args []Value) Value {
-                                if len(args) < 2 {
-                                        panic(&RuntimeError{Message: "math.min() requires at least 2 arguments"})
-                                }
-                                result := args[0]
-                                for _, a := range args[1:] {
-                                        if compareRaw(a, result) < 0 {
-                                                result = a
-                                        }
-                                }
-                                return result
-                        },
-                }
+                exports = createStdMathExports()
 
         case "std.string":
-                exports["join"] = &BuiltinFnVal{
-                        Name: "string.join",
-                        Fn: func(args []Value) Value {
-                                if len(args) != 2 {
-                                        panic(&RuntimeError{Message: "string.join() requires 2 arguments (list, separator)"})
-                                }
-                                list, ok := args[0].(*ListVal)
-                                if !ok {
-                                        panic(&RuntimeError{Message: "string.join() first argument must be a list"})
-                                }
-                                sep, ok := args[1].(*StringVal)
-                                if !ok {
-                                        panic(&RuntimeError{Message: "string.join() second argument must be a string"})
-                                }
-                                parts := make([]string, len(list.Elements))
-                                for i, el := range list.Elements {
-                                        parts[i] = el.String()
-                                }
-                                return &StringVal{Val: joinStrings(parts, sep.Val)}
-                        },
-                }
+                exports = createStdStringExports()
 
         case "std.io":
-                exports["print"] = &BuiltinFnVal{
-                        Name: "io.print",
-                        Fn: func(args []Value) Value {
-                                parts := make([]string, len(args))
-                                for i, a := range args {
-                                        parts[i] = a.String()
-                                }
-                                fmt.Println(joinStrings(parts, " "))
-                                return &NoneVal{}
-                        },
-                }
+                exports = createStdIoExports()
+
+        case "std.testing":
+                exports = createStdTestingExports()
+
+        case "std.json":
+                exports = createStdJsonExports()
 
         default:
                 return nil
@@ -631,12 +554,75 @@ func (interp *Interpreter) loadModuleValue(cached *module.CachedModule, importPa
                 return nil, fmt.Errorf("module '%s' has no AST (internal error)", importPath)
         }
 
+        // Check if module is already initialized (prevent re-initialization)
+        if interp.resolver != nil {
+                state := interp.resolver.GetInitState(cached.Path)
+                if state == module.InitComplete {
+                        // Module already initialized - return cached exports
+                        modName := module.GetModuleName(importPath)
+                        exports := make(map[string]Value)
+                        // Re-create a child interpreter just to get the env, but skip execution
+                        childInterp := NewWithResolver(cached.AST, cached.Path, interp.resolver)
+                        // Register definitions without executing
+                        for _, item := range cached.AST.Items {
+                                switch it := item.(type) {
+                                case *ast.FnDef:
+                                        fn := &FunctionVal{
+                                                Name:   it.Name,
+                                                Params: it.Params,
+                                                Body:   it.Body,
+                                                Env:    childInterp.env,
+                                        }
+                                        childInterp.env.DefineConst(it.Name, fn)
+                                case *ast.ConstDef:
+                                        val := EvalExpr(it.Value, childInterp.env)
+                                        childInterp.env.DefineConst(it.Name, val)
+                                case *ast.StructDef:
+                                        fields := make([]string, len(it.Fields))
+                                        for i, f := range it.Fields {
+                                                fields[i] = f.Name
+                                        }
+                                        childInterp.env.DefineStruct(it.Name, fields)
+                                case *ast.EnumDef:
+                                        variants := make(map[string]int, len(it.Variants))
+                                        for _, v := range it.Variants {
+                                                variants[v.Name] = len(v.Fields)
+                                        }
+                                        childInterp.env.DefineEnum(it.Name, variants)
+                                }
+                        }
+                        for name := range cached.Exports {
+                                if val, ok := childInterp.env.Get(name); ok {
+                                        exports[name] = val
+                                }
+                        }
+                        return &ModuleVal{
+                                Name:    modName,
+                                Path:    cached.Path,
+                                Exports: exports,
+                        }, nil
+                }
+                if state == module.InitInProgress {
+                        return nil, fmt.Errorf("circular initialization detected for module '%s'", importPath)
+                }
+                // Mark as in-progress
+                interp.resolver.SetInitState(cached.Path, module.InitInProgress)
+        }
+
         // Create a child interpreter for the imported module
         childInterp := NewWithResolver(cached.AST, cached.Path, interp.resolver)
 
-        // Execute the module's top-level items
+        // Execute the module's top-level items (this triggers package-level initialization)
         if _, err := childInterp.Run(); err != nil {
-                return nil, fmt.Errorf("error executing module '%s': %v", importPath, err)
+                if interp.resolver != nil {
+                        interp.resolver.SetInitState(cached.Path, module.InitError)
+                }
+                return nil, fmt.Errorf("error initializing module '%s': %v", importPath, err)
+        }
+
+        // Mark as initialized
+        if interp.resolver != nil {
+                interp.resolver.SetInitState(cached.Path, module.InitComplete)
         }
 
         // Collect exports
@@ -672,7 +658,12 @@ func (interp *Interpreter) bindImport(imp *ast.ImportNode, modVal *ModuleVal) er
                         for _, name := range imp.Names {
                                 val, ok := modVal.Exports[name]
                                 if !ok {
-                                        return fmt.Errorf("module '%s' does not export '%s'", importPath, name)
+                                        availableExports := make([]string, 0, len(modVal.Exports))
+                                        for k := range modVal.Exports {
+                                                availableExports = append(availableExports, k)
+                                        }
+                                        return fmt.Errorf("module '%s' does not export '%s' (available: %s)",
+                                                importPath, name, strings.Join(availableExports, ", "))
                                 }
                                 interp.env.DefineConst(name, val)
                         }
