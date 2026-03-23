@@ -605,6 +605,12 @@ func (interp *Interpreter) createStdModule(importPath string) *ModuleVal {
         case "std.env":
                 exports = createStdEnvExports(interp.effects.Env())
 
+        case "std.net":
+                exports = createStdNetExports(interp.effects.Net())
+
+        case "std.log":
+                exports = createStdLogExports(interp.effects.Log())
+
         default:
                 return nil
         }

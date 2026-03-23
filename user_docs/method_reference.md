@@ -1,9 +1,9 @@
 # Aura Method Reference
 
-> **Version:** 0.7.0 (Phase 4.3 — Effect Composition & Mocking Framework)
-> **Total Methods:** 108+ built-in methods + 84 stdlib functions  
+> **Version:** 0.8.0 (Phase 4.3 — Effect Runtime COMPLETE)
+> **Total Methods:** 108+ built-in methods + 95 stdlib functions  
 > **Types Covered:** String (22) · List (27) · Map (24) · Option (17) · Result (18)  
-> **Stdlib Modules:** math · string · io · testing · json · regex · collections · random · format · result · option · iter · file · time · env
+> **Stdlib Modules:** math · string · io · testing · json · regex · collections · random · format · result · option · iter · file · time · env · net · log
 
 ---
 
@@ -1646,3 +1646,149 @@ testing.reset_effects()
 | `"env"` | `Map[String, String]` | Environment variables to set |
 | `"cwd"` | `String` | Current working directory |
 | `"args"` | `List[String]` | Command-line arguments |
+
+
+
+---
+
+## std.net — HTTP Network Operations
+
+The `std.net` module provides HTTP client operations using the effect system's `NetProvider`. All functions return `Result[Response, String]` for safe error handling. Network operations are fully mockable for testing.
+
+### Usage
+
+```aura
+import std.net
+
+// Simple GET request
+let result = net.get("https://api.example.com/users")
+match result {
+    Ok(response) => {
+        print(response.status)  // 200
+        print(response.body)    // Response body string
+    }
+    Err(msg) => print("Error: " + msg)
+}
+
+// POST with body and headers
+let headers = {"Content-Type": "application/json", "Authorization": "Bearer token"}
+let result = net.post("https://api.example.com/users", '{"name":"Alice"}', headers)
+
+// Custom request with config map
+let result = net.request({
+    "method": "PATCH",
+    "url": "https://api.example.com/users/1",
+    "body": '{"name":"Bob"}',
+    "headers": {"Content-Type": "application/json"},
+    "timeout": 5000
+})
+```
+
+### Response Map Structure
+
+All successful responses return a map with these fields:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `status` | `Int` | HTTP status code (e.g., 200, 404) |
+| `status_text` | `String` | HTTP status text (e.g., "200 OK") |
+| `body` | `String` | Response body as string |
+| `headers` | `Map[String, String]` | Response headers |
+
+### Functions
+
+| Function | Arguments | Return | Description |
+|----------|-----------|--------|-------------|
+| `get` | `(url: String, headers?: Map)` | `Result[Map, String]` | HTTP GET request |
+| `post` | `(url: String, body: String, headers?: Map)` | `Result[Map, String]` | HTTP POST request |
+| `put` | `(url: String, body: String, headers?: Map)` | `Result[Map, String]` | HTTP PUT request |
+| `delete` | `(url: String, headers?: Map)` | `Result[Map, String]` | HTTP DELETE request |
+| `request` | `(config: Map)` | `Result[Map, String]` | Custom HTTP request |
+
+### `request` Config Map Keys
+
+| Key | Type | Required | Description |
+|-----|------|----------|-------------|
+| `method` | `String` | ✅ | HTTP method (GET, POST, PUT, DELETE, PATCH, etc.) |
+| `url` | `String` | ✅ | Request URL |
+| `body` | `String` | ❌ | Request body |
+| `headers` | `Map[String, String]` | ❌ | Request headers |
+| `timeout` | `Int` | ❌ | Timeout in milliseconds (default: 30000) |
+
+### Testing with Mock NetProvider
+
+```aura
+import std.testing
+import std.net
+
+// Set up mock responses for testing
+testing.with_mock_effects(fn() {
+    let result = net.get("http://mock.api/data")
+    // Uses MockNetProvider - returns default 200 OK
+})
+```
+
+---
+
+## std.log — Structured Logging
+
+The `std.log` module provides structured logging using the effect system's `LogProvider`. All log functions accept an optional context map for structured data. Logging is fully mockable for verification in tests.
+
+### Usage
+
+```aura
+import std.log
+
+// Basic logging at different levels
+log.info("Server started")
+log.warn("Disk space low")
+log.error("Connection failed")
+log.debug("Processing item 42")
+
+// Logging with structured context
+log.info("User action", {"user_id": 42, "action": "login", "ip": "192.168.1.1"})
+log.error("Request failed", {"status": 500, "url": "/api/data"})
+
+// Retrieve logs (useful in tests with mock provider)
+let logs = log.get_logs()
+for entry in logs {
+    print(entry.level + ": " + entry.message)
+}
+```
+
+### Log Entry Structure
+
+Each log entry (returned by `get_logs()`) is a map with:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `level` | `String` | Log level: "INFO", "WARN", "ERROR", "DEBUG" |
+| `message` | `String` | Log message |
+| `context` | `Map` | Structured context data |
+| `timestamp` | `Int` | Unix timestamp when logged |
+
+### Functions
+
+| Function | Arguments | Return | Description |
+|----------|-----------|--------|-------------|
+| `info` | `(message: String, context?: Map)` | `None` | Log info message |
+| `warn` | `(message: String, context?: Map)` | `None` | Log warning message |
+| `error` | `(message: String, context?: Map)` | `None` | Log error message |
+| `debug` | `(message: String, context?: Map)` | `None` | Log debug message |
+| `with_context` | `(context: Map, fn: Function)` | `Any` | Execute function with context |
+| `get_logs` | `()` | `List[Map]` | Get all logged entries |
+
+### Testing with Mock LogProvider
+
+```aura
+import std.testing
+import std.log
+
+testing.with_mock_effects(fn() {
+    log.info("test message", {"key": "value"})
+    
+    let logs = log.get_logs()
+    testing.assert_eq(logs.len(), 1)
+    testing.assert_eq(logs.first().unwrap().level, "INFO")
+})
+```
