@@ -1,9 +1,9 @@
 # AI Next Session - Aura Language
 
-## Status: Phase 3.2 Chunk 1 COMPLETE ✅ — Pattern Matching Core Infrastructure
+## Status: Phase 3.2 Chunk 2 COMPLETE ✅ — Structured Data Patterns
 
-**Version:** v0.9.0-alpha.1
-**Total Tests:** 930 (all passing)
+**Version:** v0.9.0-alpha.2
+**Total Tests:** 963 (all passing)
 **Date:** 2026-03-23
 
 ---
@@ -38,9 +38,9 @@
 | Standard library modules | 17 |
 | Standard library functions | 117 |
 | Effect providers | 5 (File, Time, Env, Net, Log) |
-| Total tests | 930 |
-| Interpreter tests | 797 |
-| Phases complete | 1, 2, 3, 3.1.1, 3.2-chunk1, 4 |
+| Total tests | 963 |
+| Interpreter tests | 830 |
+| Phases complete | 1, 2, 3, 3.1.1, 3.2-chunk1, 3.2-chunk2, 4 |
 
 ---
 
@@ -80,8 +80,8 @@ Standard Library Modules (17 total):
 | pkg/parser | 16 | All language constructs |
 | pkg/symbols | 9 | Symbol table, scopes |
 | pkg/types | 26 | Type system, subtyping |
-| pkg/interpreter | 797 | Full runtime + stdlib + effects + tuples + match expr |
-| **Total** | **930** | **All passing** |
+| pkg/interpreter | 830 | Full runtime + stdlib + effects + tuples + match expr + structured patterns |
+| **Total** | **963** | **All passing** |
 
 ---
 
@@ -146,12 +146,37 @@ Standard Library Modules (17 total):
 
 ---
 
-## 🚀 NEXT PRIORITY — Phase 3.2 Chunk 2: Tuple, List & Constructor Patterns
+## ✅ COMPLETE — Phase 3.2 Chunk 2: Structured Data Patterns
+
+> Completed 2026-03-23. 963 tests passing on v0.9.0-alpha.2.
+
+### What Was Delivered (Chunk 2)
+- [x] Tuple patterns: `(0, 0) -> "origin"`, `(x, y) -> "point"`, `(_, 2) -> ...`
+- [x] List patterns: `[] -> "empty"`, `[x] -> "single"`, `[x, y] -> "pair"`
+- [x] Spread patterns: `[first, ...rest] -> ...`, `[a, ...middle, last] -> ...`
+- [x] Constructor patterns: `Some(x)`, `None`, `Ok(v)`, `Err(e)`
+- [x] Nested patterns: `Some((x, y))`, `Ok(Some((x, y)))`, `[(a, b)]`
+- [x] New `DOTDOTDOT` token and `SpreadPattern` AST node
+- [x] 33 new tests added (963 total)
+
+### Files Changed
+| File | Action |
+|------|--------|
+| `pkg/token/token.go` | Added `DOTDOTDOT` token type |
+| `pkg/lexer/lexer.go` | Lexer recognizes `...` as `DOTDOTDOT` |
+| `pkg/ast/ast.go` | Added `SpreadPattern` type |
+| `pkg/parser/parser.go` | Parse `...ident` as spread pattern |
+| `pkg/interpreter/eval.go` | New `matchListPattern()` with spread support |
+| `pkg/interpreter/match_structured_test.go` | **NEW** — 33 structured pattern tests |
+
+---
+
+## 🚀 NEXT PRIORITY — Phase 3.2 Chunk 3: Guard Clauses, Or-patterns, Binding Patterns
 
 > **⚡ START HERE for the next session.**
 >
-> Chunk 1 complete. Main is clean with 930 tests passing on v0.9.0-alpha.1.
-> Chunk 2 extends match expressions with structured pattern matching.
+> Chunk 2 complete. Main is clean with 963 tests passing on v0.9.0-alpha.2.
+> Chunk 3 adds guard clauses, or-patterns, and binding patterns.
 >
 > **Planning document:** `/home/ubuntu/phase_3_2_plan.md`
 
@@ -160,8 +185,8 @@ Standard Library Modules (17 total):
 | Chunk | Focus | Effort | Tests | Status |
 |-------|-------|--------|-------|--------|
 | **1** | Core infrastructure + Literal/Variable/Wildcard patterns | 3–4 days | 25 | ✅ DONE |
-| **2** | Tuple, List & Constructor patterns (Option/Result) | 3–4 days | ~25–30 | ⬅️ NEXT |
-| **3** | Guard clauses, Or-patterns, Binding patterns | 2–3 days | ~15–20 | Pending |
+| **2** | Tuple, List & Constructor patterns + Spread | 3–4 days | 33 | ✅ DONE |
+| **3** | Guard clauses, Or-patterns, Binding patterns | 2–3 days | ~15–20 | ⬅️ NEXT |
 | **4** | Exhaustiveness checking & documentation | 3–4 days | ~15–20 | Pending |
 
 ### Target: v0.9.0, ~1,000+ total tests

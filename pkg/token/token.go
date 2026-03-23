@@ -56,6 +56,7 @@ const (
         ARROW        // ->
         QUESTION_DOT // ?.
         HASH         // #
+        DOTDOTDOT    // ...
 
         // Keywords
         MODULE
@@ -157,6 +158,7 @@ var tokenNames = map[Type]string{
         ARROW:        "->",
         QUESTION_DOT: "?.",
         HASH:         "#",
+        DOTDOTDOT:   "...",
         MODULE:      "module",
         IMPORT:      "import",
         FROM:        "from",

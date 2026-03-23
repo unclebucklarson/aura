@@ -1524,6 +1524,18 @@ func (p *Parser) parsePattern() ast.Pattern {
                 }
         }
 
+        // Spread pattern: ...rest
+        if p.check(token.DOTDOTDOT) {
+                p.advance()
+                if !p.check(token.IDENT) {
+                        p.addError("expected identifier after '...'")
+                        return &ast.WildcardPattern{Span: p.makeSpan(start)}
+                }
+                name := p.current().Literal
+                p.advance()
+                return &ast.SpreadPattern{Span: p.makeSpan(start), Name: name}
+        }
+
         // Binding pattern (identifier)
         if p.check(token.IDENT) {
                 name := p.current().Literal

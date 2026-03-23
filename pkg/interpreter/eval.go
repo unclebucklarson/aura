@@ -998,15 +998,7 @@ func matchPattern(pattern ast.Pattern, value Value, env *Environment) bool {
                 return matchConstructorPattern(p, value, env)
         case *ast.ListPattern:
                 if list, ok := value.(*ListVal); ok {
-                        if len(p.Elements) != len(list.Elements) {
-                                return false
-                        }
-                        for i, elem := range p.Elements {
-                                if !matchPattern(elem, list.Elements[i], env) {
-                                        return false
-                                }
-                        }
-                        return true
+                        return matchListPattern(p, list, env)
                 }
                 return false
         case *ast.TuplePattern:
@@ -1142,6 +1134,63 @@ func matchConstructorPattern(p *ast.ConstructorPattern, value Value, env *Enviro
                         }
                 }
         }
+        return true
+}
+
+func matchListPattern(p *ast.ListPattern, list *ListVal, env *Environment) bool {
+        // Find spread pattern index (-1 if none)
+        spreadIdx := -1
+        for i, elem := range p.Elements {
+                if _, ok := elem.(*ast.SpreadPattern); ok {
+                        spreadIdx = i
+                        break
+                }
+        }
+
+        if spreadIdx == -1 {
+                // No spread: exact length match required
+                if len(p.Elements) != len(list.Elements) {
+                        return false
+                }
+                for i, elem := range p.Elements {
+                        if !matchPattern(elem, list.Elements[i], env) {
+                                return false
+                        }
+                }
+                return true
+        }
+
+        // With spread pattern: minimum length is len(patterns) - 1
+        nonSpreadCount := len(p.Elements) - 1
+        if len(list.Elements) < nonSpreadCount {
+                return false
+        }
+
+        // Match elements before the spread
+        for i := 0; i < spreadIdx; i++ {
+                if !matchPattern(p.Elements[i], list.Elements[i], env) {
+                        return false
+                }
+        }
+
+        // Match elements after the spread
+        afterSpread := len(p.Elements) - spreadIdx - 1
+        for i := 0; i < afterSpread; i++ {
+                patIdx := spreadIdx + 1 + i
+                listIdx := len(list.Elements) - afterSpread + i
+                if !matchPattern(p.Elements[patIdx], list.Elements[listIdx], env) {
+                        return false
+                }
+        }
+
+        // Bind the spread variable to the remaining elements
+        sp := p.Elements[spreadIdx].(*ast.SpreadPattern)
+        restStart := spreadIdx
+        restEnd := len(list.Elements) - afterSpread
+        restElements := make([]Value, restEnd-restStart)
+        copy(restElements, list.Elements[restStart:restEnd])
+        env.Define(sp.Name, &ListVal{Elements: restElements})
+
         return true
 }
 
