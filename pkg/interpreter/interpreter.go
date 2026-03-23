@@ -16,13 +16,15 @@ type Interpreter struct {
         env      *Environment
         resolver *module.Resolver
         filePath string // path of the source file being interpreted
+        effects  *EffectContext // effect system capabilities
 }
 
 // New creates a new interpreter for the given module.
 func New(mod *ast.Module) *Interpreter {
         interp := &Interpreter{
-                module: mod,
-                env:    NewEnvironment(),
+                module:  mod,
+                env:     NewEnvironment(),
+                effects: NewEffectContext(),
         }
         interp.registerBuiltins()
         return interp
@@ -35,9 +37,40 @@ func NewWithResolver(mod *ast.Module, filePath string, resolver *module.Resolver
                 env:      NewEnvironment(),
                 resolver: resolver,
                 filePath: filePath,
+                effects:  NewEffectContext(),
         }
         interp.registerBuiltins()
         return interp
+}
+
+// NewWithEffects creates an interpreter with a custom effect context.
+// This is useful for testing with mock effect providers.
+func NewWithEffects(mod *ast.Module, effects *EffectContext) *Interpreter {
+        interp := &Interpreter{
+                module:  mod,
+                env:     NewEnvironment(),
+                effects: effects,
+        }
+        interp.registerBuiltins()
+        return interp
+}
+
+// NewWithResolverAndEffects creates an interpreter with both resolver and custom effects.
+func NewWithResolverAndEffects(mod *ast.Module, filePath string, resolver *module.Resolver, effects *EffectContext) *Interpreter {
+        interp := &Interpreter{
+                module:   mod,
+                env:      NewEnvironment(),
+                resolver: resolver,
+                filePath: filePath,
+                effects:  effects,
+        }
+        interp.registerBuiltins()
+        return interp
+}
+
+// Effects returns the interpreter's effect context.
+func (interp *Interpreter) Effects() *EffectContext {
+        return interp.effects
 }
 
 // registerBuiltins adds built-in functions and constructors to the environment.
@@ -557,6 +590,9 @@ func (interp *Interpreter) createStdModule(importPath string) *ModuleVal {
 
         case "std.iter":
                 exports = createStdIterExports()
+
+        case "std.file":
+                exports = createStdFileExports(interp.effects.File())
 
         default:
                 return nil

@@ -1,9 +1,9 @@
 # Aura Method Reference
 
-> **Version:** 0.5.0 (Phase 4.2 — Complete Standard Library)
-> **Total Methods:** 108+ built-in methods + 48 stdlib functions  
+> **Version:** 0.6.0 (Phase 4.3 — Effect System + std.file)
+> **Total Methods:** 108+ built-in methods + 57 stdlib functions  
 > **Types Covered:** String (22) · List (27) · Map (24) · Option (17) · Result (18)  
-> **Stdlib Modules:** math · string · io · testing · json · regex · collections · random · format · result · option · iter
+> **Stdlib Modules:** math · string · io · testing · json · regex · collections · random · format · result · option · iter · file
 
 ---
 
@@ -1435,3 +1435,52 @@ iter.pairwise([1, 2, 3, 4])     // [[1,2], [2,3], [3,4]]
 | `chain` | `(lists: List<List>)` | `List` | Concatenate multiple lists |
 | `interleave` | `(list1, list2)` | `List` | Interleave two lists |
 | `pairwise` | `(list)` | `List<List>` | Adjacent element pairs |
+
+
+
+---
+
+## std.file — File System Operations (Effect-Based)
+
+> **Effect:** `file` — This module uses the file effect provider, which can be mocked for testing.
+
+The `std.file` module provides file system operations through Aura's effect system. All I/O operations return `Result` types for safe error handling. In tests, the file provider can be replaced with a mock for deterministic, fast testing without actual filesystem access.
+
+```aura
+import std.file
+
+# Read a file
+let result = file.read("/path/to/file.txt")
+match result:
+    case Ok(content):
+        print(content)
+    case Err(msg):
+        print("Error: {msg}")
+
+# Write a file
+file.write("/path/to/output.txt", "Hello, Aura!")
+
+# Check existence
+if file.exists("/path/to/file.txt"):
+    print("File exists!")
+
+# List directory contents
+let entries = file.list_dir("/path/to/dir")
+match entries:
+    case Ok(list):
+        list.for_each(|name| print(name))
+    case Err(msg):
+        print("Error: {msg}")
+```
+
+| Function | Args | Returns | Description |
+|----------|------|---------|-------------|
+| `read` | `(path: String)` | `Result[String, String]` | Read entire file contents |
+| `write` | `(path: String, content: String)` | `Result[None, String]` | Write content to file (creates/overwrites) |
+| `append` | `(path: String, content: String)` | `Result[None, String]` | Append content to file |
+| `exists` | `(path: String)` | `Bool` | Check if path exists |
+| `delete` | `(path: String)` | `Result[None, String]` | Delete a file or empty directory |
+| `list_dir` | `(path: String)` | `Result[List[String], String]` | List directory entry names |
+| `create_dir` | `(path: String)` | `Result[None, String]` | Create directory (with parents) |
+| `is_file` | `(path: String)` | `Bool` | Check if path is a regular file |
+| `is_dir` | `(path: String)` | `Bool` | Check if path is a directory |
