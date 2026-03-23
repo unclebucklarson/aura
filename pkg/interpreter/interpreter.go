@@ -537,6 +537,27 @@ func (interp *Interpreter) createStdModule(importPath string) *ModuleVal {
         case "std.json":
                 exports = createStdJsonExports()
 
+        case "std.regex":
+                exports = createStdRegexExports()
+
+        case "std.collections":
+                exports = createStdCollectionsExports()
+
+        case "std.random":
+                exports = createStdRandomExports()
+
+        case "std.format":
+                exports = createStdFormatExports()
+
+        case "std.result":
+                exports = createStdResultExports()
+
+        case "std.option":
+                exports = createStdOptionExports()
+
+        case "std.iter":
+                exports = createStdIterExports()
+
         default:
                 return nil
         }

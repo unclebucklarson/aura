@@ -1,8 +1,9 @@
 # Aura Method Reference
 
-> **Version:** 0.4.0 (Phase 4.1 — Core Runtime Methods)
-> **Total Methods:** 108+  
-> **Types Covered:** String (22) · List (27) · Map (24) · Option (17) · Result (18)
+> **Version:** 0.5.0 (Phase 4.2 — Complete Standard Library)
+> **Total Methods:** 108+ built-in methods + 48 stdlib functions  
+> **Types Covered:** String (22) · List (27) · Map (24) · Option (17) · Result (18)  
+> **Stdlib Modules:** math · string · io · testing · json · regex · collections · random · format · result · option · iter
 
 ---
 
@@ -1240,3 +1241,197 @@ let record = keys.zip(vals).reduce({}, |acc, pair| {
 ---
 
 > *This reference was generated for Aura v0.4.0. For language syntax, see the main [README](../README.md). For the development roadmap, see [ROADMAP.md](../ROADMAP.md).*
+
+
+
+---
+
+## Standard Library Modules (Phase 4.2)
+
+The following modules are available via `import std.<module>`.
+
+---
+
+### std.regex
+
+Pattern matching and regular expression operations using Go's regexp syntax.
+
+```aura
+import std.regex as re
+
+re.match(pattern, text)           // Bool - test if pattern matches text
+re.find(pattern, text)            // Option<String> - find first match
+re.find_all(pattern, text)        // List<String> - find all matches
+re.replace(pattern, text, repl)   // String - replace all matches
+re.split(pattern, text)           // List<String> - split by pattern
+re.compile(pattern)               // Result<String, String> - validate & compile pattern
+```
+
+| Function | Args | Returns | Description |
+|----------|------|---------|-------------|
+| `match` | `(pattern: String, text: String)` | `Bool` | Test if pattern matches anywhere in text |
+| `find` | `(pattern: String, text: String)` | `Option<String>` | Find first match, None if not found |
+| `find_all` | `(pattern: String, text: String)` | `List<String>` | Find all non-overlapping matches |
+| `replace` | `(pattern: String, text: String, replacement: String)` | `String` | Replace all matches |
+| `split` | `(pattern: String, text: String)` | `List<String>` | Split text by pattern |
+| `compile` | `(pattern: String)` | `Result<String, String>` | Validate pattern, Ok(pattern) or Err(message) |
+
+---
+
+### std.collections
+
+Collection utilities for advanced list manipulation.
+
+```aura
+import std.collections as col
+
+col.range(5)                      // [0, 1, 2, 3, 4]
+col.range(2, 5)                   // [2, 3, 4]
+col.range(0, 10, 3)               // [0, 3, 6, 9]
+col.zip_with(fn, list1, list2)    // Zip with custom combiner
+col.partition(fn, list)           // [matching, non_matching]
+col.group_by(fn, list)            // Map<Key, List>
+col.chunk(2, [1,2,3,4,5])        // [[1,2], [3,4], [5]]
+col.take(3, list)                 // First 3 elements
+col.drop(3, list)                 // All but first 3
+col.take_while(fn, list)          // Take while predicate true
+col.drop_while(fn, list)          // Drop while predicate true
+```
+
+| Function | Args | Returns | Description |
+|----------|------|---------|-------------|
+| `range` | `(end)` or `(start, end)` or `(start, end, step)` | `List<Int>` | Generate number range |
+| `zip_with` | `(fn, list1, list2)` | `List` | Combine two lists element-wise with fn |
+| `partition` | `(fn, list)` | `List<List>` | Split into [true, false] by predicate |
+| `group_by` | `(fn, list)` | `Map` | Group elements by key function |
+| `chunk` | `(n: Int, list)` | `List<List>` | Split into chunks of size n |
+| `take` | `(n: Int, list)` | `List` | First n elements |
+| `drop` | `(n: Int, list)` | `List` | All but first n elements |
+| `take_while` | `(fn, list)` | `List` | Take while predicate is true |
+| `drop_while` | `(fn, list)` | `List` | Drop while predicate is true |
+
+---
+
+### std.random
+
+Random number generation and sampling.
+
+```aura
+import std.random as rand
+
+rand.seed(42)                     // Set seed for reproducibility
+rand.int(1, 100)                  // Random int in [1, 100]
+rand.float()                      // Random float in [0.0, 1.0)
+rand.choice(list)                 // Random element from list
+rand.shuffle(list)                // New shuffled list (non-mutating)
+rand.sample(list, 3)              // 3 random elements without replacement
+```
+
+| Function | Args | Returns | Description |
+|----------|------|---------|-------------|
+| `int` | `(min: Int, max: Int)` | `Int` | Random integer in [min, max] |
+| `float` | `()` | `Float` | Random float in [0.0, 1.0) |
+| `choice` | `(list)` | `Value` | Random element from list |
+| `shuffle` | `(list)` | `List` | Shuffled copy (original unchanged) |
+| `sample` | `(list, n: Int)` | `List` | n random elements without replacement |
+| `seed` | `(value: Int)` | `None` | Set random seed for reproducibility |
+
+---
+
+### std.format
+
+Advanced string formatting utilities.
+
+```aura
+import std.format as fmt
+
+fmt.pad_left("42", 5, "0")       // "00042"
+fmt.pad_right("hi", 10)          // "hi        "
+fmt.center("title", 20, "=")     // "=======title========"
+fmt.truncate("long text", 7)     // "long..."
+fmt.wrap("long text here", 10)   // Word-wrapped string
+fmt.indent("code\nhere", 4)      // "    code\n    here"
+fmt.dedent("  a\n  b")           // "a\nb"
+```
+
+| Function | Args | Returns | Description |
+|----------|------|---------|-------------|
+| `pad_left` | `(str, width, char?)` | `String` | Left-pad to width (default: space) |
+| `pad_right` | `(str, width, char?)` | `String` | Right-pad to width (default: space) |
+| `center` | `(str, width, char?)` | `String` | Center in width (default: space) |
+| `truncate` | `(str, max_len, suffix?)` | `String` | Truncate with suffix (default: "...") |
+| `wrap` | `(str, width)` | `String` | Word-wrap at width |
+| `indent` | `(str, spaces)` | `String` | Indent each non-empty line |
+| `dedent` | `(str)` | `String` | Remove common leading whitespace |
+
+---
+
+### std.result
+
+Utilities for working with collections of Result values.
+
+```aura
+import std.result as res
+
+res.all_ok(results)               // Bool - all Ok?
+res.any_ok(results)               // Bool - any Ok?
+res.collect(results)              // Result<List, Err> - collect or first Err
+res.partition_results(results)    // [ok_values, err_values]
+res.from_option(opt, "error")     // Option -> Result
+```
+
+| Function | Args | Returns | Description |
+|----------|------|---------|-------------|
+| `all_ok` | `(results: List<Result>)` | `Bool` | True if all are Ok |
+| `any_ok` | `(results: List<Result>)` | `Bool` | True if any is Ok |
+| `collect` | `(results: List<Result>)` | `Result<List, Err>` | Collect Ok values, fail on first Err |
+| `partition_results` | `(results: List<Result>)` | `List<List>` | Separate [oks, errs] |
+| `from_option` | `(option, err_value)` | `Result` | Some→Ok, None→Err(err_value) |
+
+---
+
+### std.option
+
+Utilities for working with collections of Option values.
+
+```aura
+import std.option as opt
+
+opt.all_some(options)             // Bool - all Some?
+opt.any_some(options)             // Bool - any Some?
+opt.collect(options)              // Option<List> - collect or None
+opt.first_some(options)           // Option - first Some value
+opt.from_result(result)           // Result -> Option
+```
+
+| Function | Args | Returns | Description |
+|----------|------|---------|-------------|
+| `all_some` | `(options: List<Option>)` | `Bool` | True if all are Some |
+| `any_some` | `(options: List<Option>)` | `Bool` | True if any is Some |
+| `collect` | `(options: List<Option>)` | `Option<List>` | Collect Some values, None if any None |
+| `first_some` | `(options: List<Option>)` | `Option` | First Some value, or None |
+| `from_result` | `(result)` | `Option` | Ok→Some, Err→None |
+
+---
+
+### std.iter
+
+Iterator utilities for list manipulation and generation.
+
+```aura
+import std.iter as iter
+
+iter.cycle([1, 2], 3)            // [1, 2, 1, 2, 1, 2]
+iter.repeat("x", 4)              // ["x", "x", "x", "x"]
+iter.chain([[1,2], [3], [4,5]])  // [1, 2, 3, 4, 5]
+iter.interleave([1,3,5], [2,4,6]) // [1, 2, 3, 4, 5, 6]
+iter.pairwise([1, 2, 3, 4])     // [[1,2], [2,3], [3,4]]
+```
+
+| Function | Args | Returns | Description |
+|----------|------|---------|-------------|
+| `cycle` | `(list, n: Int)` | `List` | Repeat list n times |
+| `repeat` | `(value, n: Int)` | `List` | List of n copies of value |
+| `chain` | `(lists: List<List>)` | `List` | Concatenate multiple lists |
+| `interleave` | `(list1, list2)` | `List` | Interleave two lists |
+| `pairwise` | `(list)` | `List<List>` | Adjacent element pairs |
