@@ -12,10 +12,11 @@ import (
 
 // Parser transforms a token stream into an AST.
 type Parser struct {
-        tokens  []token.Token
-        pos     int
-        file    string
-        errors  []Error
+        tokens             []token.Token
+        pos                int
+        file               string
+        errors             []Error
+        blockExprJustEnded bool // set when a block expression (e.g. match expr) just consumed its DEDENT
 }
 
 // Error represents a parser error.
@@ -114,6 +115,10 @@ func (p *Parser) skipNewlines() {
 }
 
 func (p *Parser) expectNewline() {
+        if p.blockExprJustEnded {
+                p.blockExprJustEnded = false
+                return // block expression already consumed its terminator
+        }
         if p.check(token.NEWLINE) {
                 p.advance()
         } else if p.check(token.EOF) || p.check(token.DEDENT) {
@@ -1061,7 +1066,7 @@ func (p *Parser) parseStatement() ast.Statement {
         case token.IF:
                 return p.parseIfStmt()
         case token.MATCH:
-                return p.parseMatchStmt()
+                return p.parseMatchStmtOrExpr()
         case token.FOR:
                 return p.parseForStmt()
         case token.WHILE:
@@ -1213,6 +1218,63 @@ func (p *Parser) parseIfStmt() *ast.IfStmt {
 
         is.Span = p.makeSpan(start)
         return is
+}
+
+// parseMatchStmtOrExpr determines whether to parse a match statement (case-based)
+// or a match expression (arrow-based) by peeking ahead after the subject.
+func (p *Parser) parseMatchStmtOrExpr() ast.Statement {
+        // Save position to peek ahead
+        saved := p.pos
+        savedErrors := len(p.errors)
+        savedBlockExpr := p.blockExprJustEnded
+        p.advance() // consume 'match'
+
+        // Skip the subject expression tokens until we hit ':'
+        depth := 0
+        for !p.check(token.EOF) {
+                if p.check(token.COLON) && depth == 0 {
+                        break
+                }
+                if p.check(token.LPAREN) || p.check(token.LBRACKET) {
+                        depth++
+                }
+                if p.check(token.RPAREN) || p.check(token.RBRACKET) {
+                        depth--
+                }
+                p.advance()
+        }
+
+        if p.check(token.COLON) {
+                p.advance() // skip ':'
+        }
+        // Skip newlines
+        for p.check(token.NEWLINE) {
+                p.advance()
+        }
+        // Skip indent
+        if p.check(token.INDENT) {
+                p.advance()
+        }
+        // Skip newlines after indent
+        for p.check(token.NEWLINE) {
+                p.advance()
+        }
+
+        // Check if the first token is 'case' -> MatchStmt, otherwise -> MatchExpr
+        isStmt := p.check(token.CASE)
+
+        // Restore position
+        p.pos = saved
+        p.errors = p.errors[:savedErrors]
+        p.blockExprJustEnded = savedBlockExpr
+
+        if isStmt {
+                return p.parseMatchStmt()
+        }
+        // Parse as expression statement wrapping a match expression
+        start := p.current().Pos
+        expr := p.parseMatchExpr()
+        return &ast.ExprStmt{Span: p.makeSpan(start), Expr: expr}
 }
 
 func (p *Parser) parseMatchStmt() *ast.MatchStmt {
@@ -1780,6 +1842,9 @@ func (p *Parser) parsePrimary() ast.Expr {
                 // We need to check if the next token after condition is "then"
                 return p.parseIfExprOrPrimary()
 
+        case token.MATCH:
+                return p.parseMatchExpr()
+
         case token.PIPE:
                 return p.parseLambda()
 
@@ -1882,6 +1947,49 @@ func (p *Parser) parseIfExprOrPrimary() ast.Expr {
 
         // If no 'then', just return the condition (shouldn't normally happen)
         return cond
+}
+
+func (p *Parser) parseMatchExpr() ast.Expr {
+        start := p.current().Pos
+        p.advance() // consume 'match'
+
+        subject := p.parseExpr()
+        p.expect(token.COLON)
+        p.expectNewline()
+        p.expect(token.INDENT)
+
+        var arms []*ast.MatchArm
+        for !p.check(token.DEDENT) && !p.check(token.EOF) {
+                p.skipNewlines()
+                if p.check(token.DEDENT) || p.check(token.EOF) {
+                        break
+                }
+                armStart := p.current().Pos
+                pattern := p.parsePattern()
+                p.expect(token.ARROW)
+                body := p.parseExpr()
+                arms = append(arms, &ast.MatchArm{
+                        Span:    p.makeSpan(armStart),
+                        Pattern: pattern,
+                        Body:    body,
+                })
+                // Consume newline after arm if present
+                p.skipNewlines()
+        }
+
+        // Consume the DEDENT that closes the match body.
+        // Mark that we just exited a block expression, so the enclosing
+        // statement doesn't need an explicit newline terminator.
+        if p.check(token.DEDENT) {
+                p.advance()
+                p.blockExprJustEnded = true
+        }
+
+        return &ast.MatchExpr{
+                Span:    p.makeSpan(start),
+                Subject: subject,
+                Arms:    arms,
+        }
 }
 
 func (p *Parser) parseLambda() ast.Expr {

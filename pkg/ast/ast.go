@@ -948,3 +948,24 @@ type TuplePattern struct {
 func (n *TuplePattern) nodeType() string    { return "TuplePattern" }
 func (n *TuplePattern) GetSpan() token.Span { return n.Span }
 func (n *TuplePattern) isPattern()          {}
+
+// --- Match Expression ---
+
+// MatchExpr represents a match expression: match value: pattern -> expr, ...
+// Unlike MatchStmt, this is an expression that returns a value.
+type MatchExpr struct {
+	Span    token.Span
+	Subject Expr
+	Arms    []*MatchArm
+}
+
+func (n *MatchExpr) nodeType() string    { return "MatchExpr" }
+func (n *MatchExpr) GetSpan() token.Span { return n.Span }
+func (n *MatchExpr) isExpr()             {}
+
+// MatchArm represents a single arm in a match expression: pattern -> expr
+type MatchArm struct {
+	Span    token.Span
+	Pattern Pattern
+	Body    Expr
+}

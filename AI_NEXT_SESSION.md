@@ -1,9 +1,9 @@
 # AI Next Session - Aura Language
 
-## Status: Phase 3.1.1 MERGED ✅ — Ready for Phase 3.2 (Pattern Matching)
+## Status: Phase 3.2 Chunk 1 COMPLETE ✅ — Pattern Matching Core Infrastructure
 
-**Version:** v0.8.1
-**Total Tests:** 905 (all passing)
+**Version:** v0.9.0-alpha.1
+**Total Tests:** 930 (all passing)
 **Date:** 2026-03-23
 
 ---
@@ -38,9 +38,9 @@
 | Standard library modules | 17 |
 | Standard library functions | 117 |
 | Effect providers | 5 (File, Time, Env, Net, Log) |
-| Total tests | 905 |
-| Interpreter tests | 772 |
-| Phases complete | 1, 2, 3, 3.1.1, 4 |
+| Total tests | 930 |
+| Interpreter tests | 797 |
+| Phases complete | 1, 2, 3, 3.1.1, 3.2-chunk1, 4 |
 
 ---
 
@@ -80,8 +80,8 @@ Standard Library Modules (17 total):
 | pkg/parser | 16 | All language constructs |
 | pkg/symbols | 9 | Symbol table, scopes |
 | pkg/types | 26 | Type system, subtyping |
-| pkg/interpreter | 772 | Full runtime + stdlib + effects + tuples |
-| **Total** | **905** | **All passing** |
+| pkg/interpreter | 797 | Full runtime + stdlib + effects + tuples + match expr |
+| **Total** | **930** | **All passing** |
 
 ---
 
@@ -118,32 +118,51 @@ Standard Library Modules (17 total):
 
 ---
 
-## 🚀 NEXT PRIORITY — Phase 3.2: Pattern Matching
+## ✅ COMPLETE — Phase 3.2 Chunk 1: Pattern Matching Core Infrastructure
+
+> Completed 2026-03-23. PR #4 merged. 930 tests passing on v0.9.0-alpha.1.
+
+### What Was Delivered (Chunk 1)
+- [x] `MatchExpr` AST node (expression form with `->` syntax)
+- [x] `MatchArm` AST node (pattern -> expression pair)
+- [x] Parser: `parseMatchExpr()` for expression-form match
+- [x] Parser: `parseMatchStmtOrExpr()` auto-disambiguation (case vs arrow)
+- [x] Parser: `blockExprJustEnded` flag for proper indentation handling
+- [x] Interpreter: `evalMatchExpr()` with first-match semantics
+- [x] Float literal pattern matching (was missing)
+- [x] Literal patterns: Int, Float, String, Bool, None
+- [x] Variable binding patterns
+- [x] Wildcard patterns
+- [x] No-match runtime error
+- [x] 25 new tests added (930 total)
+
+### Files Changed
+| File | Action |
+|------|--------|
+| `pkg/ast/ast.go` | Added `MatchExpr`, `MatchArm` types |
+| `pkg/parser/parser.go` | Added `parseMatchExpr()`, `parseMatchStmtOrExpr()`, `blockExprJustEnded` |
+| `pkg/interpreter/eval.go` | Added `evalMatchExpr()`, float literal matching |
+| `pkg/interpreter/match_test.go` | **NEW** — 25 match expression tests |
+
+---
+
+## 🚀 NEXT PRIORITY — Phase 3.2 Chunk 2: Tuple, List & Constructor Patterns
 
 > **⚡ START HERE for the next session.**
 >
-> PR #3 merged. Main is clean with 905 tests passing on v0.8.1.
-> Phase 3.2 enhances the existing `match` statement with exhaustiveness checking,
-> nested patterns, guard clauses, and full destructuring support.
+> Chunk 1 complete. Main is clean with 930 tests passing on v0.9.0-alpha.1.
+> Chunk 2 extends match expressions with structured pattern matching.
 >
 > **Planning document:** `/home/ubuntu/phase_3_2_plan.md`
 
-### Phase 3.2 Chunks (4 chunks, 2–3 weeks)
+### Phase 3.2 Remaining Chunks
 
-| Chunk | Focus | Effort | Tests |
-|-------|-------|--------|-------|
-| **1** | Core infrastructure + Literal/Variable/Wildcard patterns | 3–4 days | ~25–30 |
-| **2** | Tuple, List & Constructor patterns (Option/Result) | 3–4 days | ~25–30 |
-| **3** | Guard clauses, Or-patterns, Binding patterns | 2–3 days | ~15–20 |
-| **4** | Exhaustiveness checking & documentation | 3–4 days | ~15–20 |
-
-### Key Files to Create/Modify
-- `pkg/ast/ast.go` — New pattern + match AST nodes
-- `pkg/parser/parser.go` — Match expression + pattern parsing
-- `pkg/interpreter/eval.go` — Match expression evaluation
-- `pkg/interpreter/pattern.go` — **NEW** Pattern matching engine
-- `pkg/interpreter/pattern_test.go` — **NEW** Pattern matching tests
-- `pkg/checker/exhaustive.go` — **NEW** Exhaustiveness analysis
+| Chunk | Focus | Effort | Tests | Status |
+|-------|-------|--------|-------|--------|
+| **1** | Core infrastructure + Literal/Variable/Wildcard patterns | 3–4 days | 25 | ✅ DONE |
+| **2** | Tuple, List & Constructor patterns (Option/Result) | 3–4 days | ~25–30 | ⬅️ NEXT |
+| **3** | Guard clauses, Or-patterns, Binding patterns | 2–3 days | ~15–20 | Pending |
+| **4** | Exhaustiveness checking & documentation | 3–4 days | ~15–20 | Pending |
 
 ### Target: v0.9.0, ~1,000+ total tests
 

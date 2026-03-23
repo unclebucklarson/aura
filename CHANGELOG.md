@@ -6,6 +6,39 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [v0.9.0-alpha.1] — 2026-03-23
+
+### Phase 3.2 Chunk 1: Pattern Matching Core Infrastructure
+
+First chunk of pattern matching support — match expressions with basic patterns.
+
+### Added
+- **Match expression syntax**: `match value: pattern -> expr` as an expression (returns a value)
+  - Distinct from existing `match` statement (which uses `case` keyword + block body)
+  - Can be used in `let` bindings: `let result = match x: 1 -> "one" ...`
+  - Can be used in `return` statements: `return match x: ...`
+  - Supports nesting: `match x: 0 -> "zero" _ -> match y: ...`
+- **Literal patterns**: Match against `Int`, `Float`, `String`, `Bool`, `None` values
+- **Variable binding patterns**: `n -> n * 2` binds matched value to a variable
+- **Wildcard pattern**: `_ -> default_value` matches anything
+- **First-match semantics**: Returns result of first matching arm
+- **No-match runtime error**: Panics with descriptive error if no pattern matches
+- **Float literal matching**: Added missing float support to `matchLiteralPattern`
+- **Parser disambiguation**: Automatically detects `case`-based (statement) vs `arrow`-based (expression) match syntax
+- **25 new tests** for match expressions, bringing total to **930 passing tests**
+
+### AST Changes
+- New `MatchExpr` node (expression returning a value)
+- New `MatchArm` node (pattern -> expression pair)
+
+### Files Changed
+- `pkg/ast/ast.go` — Added `MatchExpr`, `MatchArm` types
+- `pkg/parser/parser.go` — Added `parseMatchExpr()`, `parseMatchStmtOrExpr()` disambiguation, `blockExprJustEnded` flag for indentation handling
+- `pkg/interpreter/eval.go` — Added `evalMatchExpr()`, float literal matching in `matchLiteralPattern`
+- `pkg/interpreter/match_test.go` — **NEW**: 25 comprehensive match expression tests
+
+---
+
 ## [v0.8.1] — 2026-03-23
 
 ### Phase 3.1.1: Tuple Literal Syntax & Destructuring

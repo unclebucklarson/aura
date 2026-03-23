@@ -116,6 +116,9 @@ func EvalExpr(expr ast.Expr, env *Environment) Value {
         case *ast.OptionPropagate:
                 return evalOptionPropagate(e, env)
 
+        case *ast.MatchExpr:
+                return evalMatchExpr(e, env)
+
         default:
                 runtimePanic(expr.GetSpan(), "unsupported expression type: %T", expr)
         }
@@ -965,6 +968,23 @@ func execMatchStmt(s *ast.MatchStmt, env *Environment) Value {
         return &NoneVal{}
 }
 
+// evalMatchExpr evaluates a match expression (pattern -> expr form).
+// Unlike execMatchStmt, this uses arrow syntax and each arm is an expression.
+// Panics with RuntimeError if no pattern matches.
+func evalMatchExpr(m *ast.MatchExpr, env *Environment) Value {
+        subject := EvalExpr(m.Subject, env)
+
+        for _, arm := range m.Arms {
+                armEnv := NewEnclosedEnvironment(env)
+                if matchPattern(arm.Pattern, subject, armEnv) {
+                        return EvalExpr(arm.Body, armEnv)
+                }
+        }
+
+        runtimePanic(m.Span, "no pattern matched in match expression for value: %s", subject.String())
+        return &NoneVal{}
+}
+
 func matchPattern(pattern ast.Pattern, value Value, env *Environment) bool {
         switch p := pattern.(type) {
         case *ast.WildcardPattern:
@@ -1019,6 +1039,16 @@ func matchLiteralPattern(p *ast.LiteralPattern, value Value) bool {
                         return false
                 }
                 return iv.Val == pv
+        case token.FLOAT_LIT:
+                fv, ok := value.(*FloatVal)
+                if !ok {
+                        return false
+                }
+                pv, err := strconv.ParseFloat(p.Value, 64)
+                if err != nil {
+                        return false
+                }
+                return fv.Val == pv
         case token.STRING_LIT:
                 sv, ok := value.(*StringVal)
                 if !ok {
