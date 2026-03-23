@@ -36,7 +36,7 @@ These principles guide every phase of development. When evaluating features, tra
 | 3.3 | Advanced Type Features | 🔲 Not Started | v1.0.0 | 3–4 weeks |
 | 4 | Runtime & Standard Library | ✅ COMPLETE (4.1 ✅, 4.2 ✅, 4.3 ✅) | v0.8.0 | — |
 | 5 | Advanced Tooling & Ecosystem | 🔲 Not Started | v1.1.0 | 4–6 weeks |
-| 6 | Compiler & Optimization | 🔲 Not Started | v2.0.0 | 6–8 weeks |
+| 6 | Compiler & Native Compilation | 🔲 Not Started | v2.0.0 | 9–12 weeks |
 
 ---
 
@@ -436,42 +436,86 @@ Phase 4 delivers a complete runtime and standard library for Aura:
 
 ---
 
-## Phase 6: Compiler & Optimization — 🔲 NOT STARTED
+## Phase 6: Compiler & Native Compilation — 🔲 NOT STARTED
 
-**Goal:** Compile Aura programs to bytecode or native code for production-grade performance.
+**Goal:** Compile Aura programs to **native executables** via LLVM, with a bytecode VM for fast development iteration. This is the culmination of Aura's vision — a language with Python's expressiveness that compiles to standalone, zero-dependency binaries.
 
-> 🤖 **AI optimization:** A bytecode compiler produces deterministic, inspectable output that AI agents can reason about. Debug information and source maps allow AI to correlate runtime errors with source locations. JIT compilation enables AI-generated code to run at near-native speed without manual optimization — the AI writes correct code, the compiler makes it fast.
+> 🤖 **AI optimization:** A bytecode compiler produces deterministic, inspectable output that AI agents can reason about. Native compilation via LLVM means AI-generated code runs at C-level speed without manual optimization — the AI writes correct code, the compiler makes it fast. The dual-mode approach (VM for development, native for production) gives AI agents the best of both worlds: instant feedback during generation and maximum performance for deployment.
 
 **Dependencies:** Phases 3.2, 3.3, 5 (language features should be stable before compilation)
 
-**Target:** v2.0.0
+**Target:** v2.0.0 | **Total Estimate:** 9–12 weeks
 
-### 6.1 Bytecode Compiler
+---
 
-**Complexity:** High | **Estimate:** 2–3 weeks
+### 🔥 Why Native Compilation Matters
 
-Design and implement a bytecode instruction set and compiler for Aura.
+Aura is what Python should have been. Python proved that expressive, readable syntax wins — but it pays a permanent performance tax because it was never designed for compilation. Aura is different:
 
-- [ ] Design bytecode instruction set (stack-based)
-- [ ] Implement compiler from typed AST to bytecode
-- [ ] Constant pool for literals and identifiers
+- **Static typing with inference** — Aura knows every type at compile time, enabling aggressive optimization without type annotations everywhere.
+- **Explicit effect system** — Side effects are tracked in the type system, so the compiler knows exactly which code is pure and can be optimized freely.
+- **No GIL, no interpreter overhead** — Native executables run on bare metal, not through a runtime layer.
+- **Zero-dependency deployment** — Ship a single binary. No `pip install`, no virtual environments, no "works on my machine."
+
+The dual-mode approach gives developers the best workflow:
+
+| Mode | Command | Use Case | Speed |
+|------|---------|----------|-------|
+| **Development** | `aura run main.aura` | Fast iteration, debugging, REPL | Instant startup, interpreted |
+| **Production** | `aura build main.aura --release` | Deployment, distribution | Native speed, single binary |
+
+```bash
+# Development: instant feedback loop (VM mode)
+$ aura run main.aura
+Hello, World!
+
+# Production: compile to native executable
+$ aura build main.aura --release
+Compiling main.aura → main (x86_64-linux)
+   Optimizing with LLVM O2...
+   Done in 1.2s
+
+$ ./main
+Hello, World!
+
+$ file main
+main: ELF 64-bit LSB executable, x86-64, statically linked
+
+$ ls -lh main
+-rwxr-xr-x 1 user user 1.8M Mar 22 2026 main
+```
+
+This is the end state: **write Aura, ship native binaries.** No runtime. No dependencies. Just your program.
+
+---
+
+### 6.1 Bytecode Compiler (2 weeks)
+
+**Complexity:** High
+
+Design and implement a stack-based intermediate representation (IR) and bytecode compiler.
+
+- [ ] Design stack-based bytecode instruction set
+- [ ] Implement compiler from typed AST to bytecode IR
+- [ ] Constant pool for literals, identifiers, and type info
+- [ ] Symbol table generation for functions, closures, and modules
 - [ ] Function/closure compilation with upvalue capture
 - [ ] Module-level bytecode compilation
 - [ ] Debug information embedding (source locations, variable names)
 - [ ] Bytecode serialization/deserialization (`.aurac` files)
-- [ ] Bytecode disassembler for debugging
+- [ ] Bytecode disassembler for inspection and debugging
 
 **Package:** `pkg/compiler`
 
-**Expected outcome:** Aura programs compile to a portable bytecode format that can be inspected, cached, and distributed.
+**Expected outcome:** Aura programs compile to a portable bytecode format that serves as the shared IR for both the VM and native backends.
 
-### 6.2 Virtual Machine (VM)
+### 6.2 Virtual Machine — Development Mode (2 weeks)
 
-**Complexity:** High | **Estimate:** 2–3 weeks
+**Complexity:** High
 
-Build a stack-based virtual machine to execute Aura bytecode.
+Build a stack-based virtual machine for **fast development iteration**. This is the `aura run` experience — instant startup, rich debugging, rapid feedback.
 
-- [ ] Stack-based execution engine
+- [ ] Stack-based bytecode interpreter
 - [ ] Call frame management (functions, closures, methods)
 - [ ] Upvalue handling for closures
 - [ ] Effect system integration (capability passing through VM)
@@ -479,54 +523,110 @@ Build a stack-based virtual machine to execute Aura bytecode.
 - [ ] Exception/panic handling with stack unwinding
 - [ ] Built-in function dispatch (bridge to Go runtime)
 - [ ] Standard library integration via VM opcodes
+- [ ] Rich debugging support (breakpoints, step-through, variable inspection)
+- [ ] Hot reload for development workflow
 
 **Package:** `pkg/vm`
 
-**Expected outcome:** Aura programs execute 10–50x faster than the tree-walk interpreter while maintaining identical semantics.
+**Expected outcome:** `aura run` executes 10–50x faster than the tree-walk interpreter while maintaining identical semantics. Development mode provides instant startup and rich debugging — the go-to mode during coding.
 
-### 6.3 Performance Optimizations
+### 6.3 LLVM Native Backend — Production Mode (3–4 weeks) ⭐
 
-**Complexity:** Medium-High | **Estimate:** 1–2 weeks
+**Complexity:** Very High | **This is the key differentiator.**
 
-Optimize the VM and runtime for real-world performance.
+Compile Aura bytecode IR to native machine code via LLVM. This is what makes Aura a **real systems-capable language**, not just another scripting language with nice syntax.
 
-- [ ] Garbage collection (mark-and-sweep or tracing GC)
-- [ ] String interning for reduced memory usage
-- [ ] Constant folding at compile time
-- [ ] Dead code elimination
-- [ ] Inline caching for method dispatch
-- [ ] Tail call optimization
-- [ ] Stack overflow detection and recovery
+- [ ] LLVM IR generation from Aura bytecode/AST
+- [ ] Type mapping (Aura types → LLVM types)
+- [ ] Function compilation (including closures and lambdas)
+- [ ] Native compilation to platform-specific executables
+  - [ ] x86_64 (Linux, macOS, Windows)
+  - [ ] ARM64 (macOS Apple Silicon, Linux ARM)
+  - [ ] Cross-compilation support
+- [ ] Zero-runtime executables (no interpreter, no VM needed)
+- [ ] Static linking for single-binary deployment
+- [ ] Effect system compilation (capabilities as compile-time constructs)
+- [ ] Struct layout optimization (field reordering, padding)
+- [ ] Enum compilation with tagged unions
+- [ ] Pattern matching compilation (decision trees)
+- [ ] Standard library native compilation (inline where possible)
+- [ ] C FFI bridge (call C libraries from Aura)
+- [ ] Production deployment mode (`aura build --release`)
 
-**Package:** `pkg/vm`, `pkg/compiler`
+**Package:** `pkg/codegen/llvm`
 
-**Expected outcome:** Aura programs handle real workloads (100K+ iterations, large data structures) with predictable memory behavior.
+**Expected outcome:** `aura build --release` produces standalone native executables with:
+- **Performance:** Within 2–5x of equivalent C code
+- **Binary size:** Small, statically linked executables (< 5MB for typical programs)
+- **Startup time:** Instant (no interpreter initialization)
+- **Dependencies:** Zero (single binary, no runtime required)
+- **Platforms:** x86_64 and ARM64 on Linux, macOS, and Windows
 
-### 6.4 Advanced Optimizations (Future)
+### 6.4 Optimizations (2 weeks)
 
-**Complexity:** Very High | **Estimate:** 2+ weeks (ongoing)
+**Complexity:** Medium-High
 
-*These are stretch goals for post-v2.0.0 development.*
+Optimization passes that apply to both VM and native compilation paths.
 
-- [ ] JIT compilation (compile hot paths to native code)
-- [ ] Profile-guided optimization
-- [ ] WASM compilation target (run Aura in browsers)
-- [ ] Native compilation via LLVM or Go codegen
-- [ ] Concurrent GC (for async workloads)
-- [ ] Transpilation to Go (generate Go source from Aura AST)
+- [ ] **Inlining** — Inline small functions and closures
+- [ ] **Constant folding** — Evaluate constant expressions at compile time
+- [ ] **Dead code elimination** — Remove unreachable code and unused definitions
+- [ ] **Tail call optimization** — Convert tail-recursive calls to loops
+- [ ] **Escape analysis** — Stack-allocate values that don't escape their scope
+- [ ] **String interning** — Deduplicate string constants
+- [ ] **Profile-guided optimization (PGO)** — Use runtime profiles to guide optimization decisions
+- [ ] **Link-time optimization (LTO)** — Cross-module optimization during final linking
+- [ ] **Garbage collection** — Mark-and-sweep GC for VM mode; reference counting or ownership for native mode
+- [ ] **Inline caching** — Fast method dispatch for polymorphic calls (VM mode)
 
-**Package:** `pkg/jit`, `pkg/codegen`
+**Package:** `pkg/compiler`, `pkg/vm`, `pkg/codegen/llvm`
 
-**Expected outcome:** Aura achieves performance parity with compiled languages for CPU-bound workloads.
+**Expected outcome:** Optimized Aura programs achieve predictable, high performance with minimal memory overhead. LTO and PGO enable production builds to approach hand-optimized performance.
+
+---
+
+### The Dual-Mode Architecture
+
+```
+                    ┌─────────────────┐
+                    │   Aura Source    │
+                    │   (.aura files)  │
+                    └────────┬────────┘
+                             │
+                    ┌────────▼────────┐
+                    │  Parser + AST   │
+                    │  Type Checker   │
+                    └────────┬────────┘
+                             │
+                    ┌────────▼────────┐
+                    │    Bytecode     │
+                    │   Compiler      │
+                    │  (shared IR)    │
+                    └───┬─────────┬───┘
+                        │         │
+           ┌────────────▼──┐  ┌──▼────────────┐
+           │  VM Executor  │  │  LLVM Backend  │
+           │  (aura run)   │  │  (aura build)  │
+           │               │  │                │
+           │  • Fast start │  │  • Native bin  │
+           │  • Debugging  │  │  • Zero deps   │
+           │  • Hot reload │  │  • Max speed   │
+           │  • Dev mode   │  │  • Prod mode   │
+           └───────────────┘  └────────────────┘
+```
 
 ### Phase 6 Milestone Criteria
 
 Phase 6 is complete when:
-- ✅ All existing tests pass under both interpreter and VM execution
-- ✅ Bytecode compiler produces correct output for all language features
-- ✅ VM executes at least 10x faster than tree-walk interpreter on benchmarks
-- ✅ GC handles long-running programs without memory leaks
-- ✅ Debug information allows source-level error reporting from bytecode
+- [ ] All existing tests pass under both interpreter and VM execution
+- [ ] Bytecode compiler produces correct output for all language features
+- [ ] VM executes at least 10x faster than tree-walk interpreter on benchmarks
+- [ ] `aura build --release` produces native executables for x86_64 and ARM64
+- [ ] Native executables run with zero external dependencies
+- [ ] Performance within 5x of equivalent C code on compute benchmarks
+- [ ] GC handles long-running programs without memory leaks (VM mode)
+- [ ] Debug information allows source-level error reporting from both VM and native
+- [ ] Cross-compilation works (build Linux binary on macOS and vice versa)
 
 ---
 
