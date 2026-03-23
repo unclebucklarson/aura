@@ -30,44 +30,62 @@
 
 A complete toolchain for the **Aura programming language** — a Python-inspired, statically typed language with specification-driven development, algebraic types, and effect tracking.
 
-Built in Go. Implements lexing, parsing, AST construction, canonical source formatting, type checking with semantic analysis, tree-walk interpreter, and 108+ core runtime methods across String, List, Map, Option, and Result types.
+Built in Go. Implements lexing, parsing, AST construction, canonical source formatting, type checking with semantic analysis, tree-walk interpreter, 108+ core runtime methods across String, List, Map, Option, and Result types, 17 standard library modules with 117 functions, and a complete effect system with 5 mockable providers.
 
 ## Project Structure
 
 ```
 aura-toolchain/
-├── cmd/aura/main.go           # CLI entry point (format, parse, check, run, test, repl)
+├── cmd/aura/main.go              # CLI entry point (format, parse, check, run, test, repl)
 ├── pkg/
-│   ├── token/token.go         # Token types, positions, spans
-│   ├── lexer/lexer.go         # Indentation-sensitive lexer (INDENT/DEDENT)
-│   ├── ast/ast.go             # Complete AST node definitions
-│   ├── parser/parser.go       # Recursive descent parser
-│   ├── formatter/formatter.go # AST → canonical source formatter
-│   ├── symbols/symbols.go     # Symbol table & scope management
-│   ├── types/types.go         # Type system representation & subtyping
-│   ├── checker/               # Type checker & semantic analysis
-│   │   ├── checker.go         # Multi-pass type checker
-│   │   └── errors.go          # Structured, AI-parseable error diagnostics
-│   └── interpreter/           # Tree-walk interpreter (Phase 3) + Runtime Methods (Phase 4.1)
-│       ├── value.go           # Value types (Int, Float, String, Bool, etc.)
-│       ├── env.go             # Environment with scope chain
-│       ├── eval.go            # Expression & statement evaluator
-│       ├── interpreter.go     # Module execution & builtins
-│       ├── test.go            # Test block runner
-│       ├── methods.go         # Method dispatch registry infrastructure
-│       ├── methods_string.go  # 22 String methods
-│       ├── methods_list.go    # 27 List methods + callValue/cmpValues helpers
-│       ├── methods_map.go     # 24 Map methods
-│       └── methods_option.go  # 17 Option + 18 Result methods
-├── testdata/                  # Sample .aura files
-│   ├── models.aura            # AuraTask models (struct, enum, type aliases)
-│   ├── specs.aura             # Specification blocks
-│   ├── service.aura           # Functions with effects & satisfies clauses
-│   ├── control_flow.aura      # if/elif/else, match, for loops
-│   ├── expressions.aura       # Pipelines, list comprehensions, lambdas
-│   ├── comments.aura          # Comment handling
-│   ├── simple.aura            # Minimal example
-│   └── empty.aura             # Edge case: empty module
+│   ├── token/token.go            # Token types, positions, spans
+│   ├── lexer/lexer.go            # Indentation-sensitive lexer (INDENT/DEDENT)
+│   ├── ast/ast.go                # Complete AST node definitions
+│   ├── parser/parser.go          # Recursive descent parser
+│   ├── formatter/formatter.go    # AST → canonical source formatter
+│   ├── symbols/symbols.go        # Symbol table & scope management
+│   ├── types/types.go            # Type system representation & subtyping
+│   ├── checker/                   # Type checker & semantic analysis
+│   │   ├── checker.go            # Multi-pass type checker
+│   │   └── errors.go             # Structured, AI-parseable error diagnostics
+│   ├── module/                    # Module system
+│   │   └── resolver.go           # Module resolution, initialization ordering, cycle detection
+│   └── interpreter/               # Tree-walk interpreter + Runtime + Standard Library + Effects
+│       ├── value.go              # Value types (Int, Float, String, Bool, etc.)
+│       ├── env.go                # Environment with scope chain
+│       ├── eval.go               # Expression & statement evaluator
+│       ├── interpreter.go        # Module execution, builtins & stdlib registration
+│       ├── test.go               # Test block runner
+│       ├── methods.go            # Method dispatch registry infrastructure
+│       ├── methods_string.go     # 22 String methods
+│       ├── methods_list.go       # 27 List methods + callValue/cmpValues helpers
+│       ├── methods_map.go        # 24 Map methods
+│       ├── methods_option.go     # 17 Option + 18 Result methods
+│       ├── effect.go             # Effect system: EffectContext, 5 providers (Real + Mock)
+│       ├── stdlib_math.go        # std.math (8 functions)
+│       ├── stdlib_string.go      # std.string (4 functions)
+│       ├── stdlib_io.go          # std.io (3 functions)
+│       ├── stdlib_testing.go     # std.testing (23 functions incl. effect-aware)
+│       ├── stdlib_json.go        # std.json (2 functions)
+│       ├── stdlib_regex.go       # std.regex (6 functions)
+│       ├── stdlib_collections.go # std.collections (9 functions)
+│       ├── stdlib_random.go      # std.random (6 functions)
+│       ├── stdlib_format.go      # std.format (7 functions)
+│       ├── stdlib_result.go      # std.result (5 functions)
+│       ├── stdlib_option.go      # std.option (5 functions)
+│       ├── stdlib_iter.go        # std.iter (5 functions)
+│       ├── stdlib_file.go        # std.file (9 functions, effect-based)
+│       ├── stdlib_time.go        # std.time (8 functions, effect-based)
+│       ├── stdlib_env.go         # std.env (6 functions, effect-based)
+│       ├── stdlib_net.go         # std.net (5 functions, effect-based)
+│       └── stdlib_log.go         # std.log (6 functions, effect-based)
+├── testdata/                      # Sample .aura files
+├── user_docs/                     # User-facing documentation
+│   ├── getting_started.md        # Installation and first program
+│   ├── language_guide.md         # Tutorial-style language guide
+│   ├── language_reference.md     # Formal language reference
+│   ├── method_reference.md       # Complete method & stdlib reference
+│   └── examples.md              # Working examples for all features
 └── README.md
 ```
 
@@ -177,6 +195,18 @@ go build -o aura ./cmd/aura
 - **Option** (17): `unwrap`, `expect`, `map`, `flat_map`, `and_then`, `filter`, `or_else`, `zip`, `to_result`, `is_some`, `is_none`, `contains`, and more
 - **Result** (18): `unwrap`, `expect`, `map`, `map_err`, `and_then`, `or_else`, `ok`, `err`, `to_option`, `is_ok`, `is_err`, `contains`, and more
 
+### Standard Library (17 modules, 117 functions)
+- **Pure Computation:** `std.math` (8), `std.string` (4), `std.io` (3), `std.json` (2), `std.regex` (6), `std.collections` (9), `std.random` (6), `std.format` (7), `std.result` (5), `std.option` (5), `std.iter` (5)
+- **Testing:** `std.testing` (23 functions including effect-aware assertions and mock setup)
+- **Effect-Based I/O:** `std.file` (9), `std.time` (8), `std.env` (6), `std.net` (5), `std.log` (6)
+
+### Effect System
+- **5 effect providers** with Real + Mock implementations: File, Time, Env, Net, Log
+- **MockBuilder** fluent API for configuring test contexts
+- **Effect composition** via Clone, Derive, and EffectStack
+- All I/O operations return `Result` types for explicit error handling
+- Full mockability enables AI-generated testable code without external dependencies
+
 ### Indentation
 - Python-style significant whitespace
 - INDENT/DEDENT token generation
@@ -190,14 +220,20 @@ Run the full test suite:
 go test ./... -v
 ```
 
-**468 tests total** across all packages:
+**875 tests total** across all packages:
 - `pkg/lexer/` — 11 tests covering tokenization, indentation, comments, edge cases
 - `pkg/parser/` — 16 tests covering all language constructs
 - `pkg/formatter/` — 9 tests including round-trip verification (parse → format → parse = same AST)
 - `pkg/symbols/` — 9 tests covering symbol table, scopes, and lookups
 - `pkg/types/` — 26 tests covering type system, equality, subtyping, and registry
-- `pkg/checker/` — 48 tests covering type checking, effects, specs, and error diagnostics
-- `pkg/interpreter/` — 349 tests covering values, environment, expressions, statements, control flow, builtins, structs, enums, match, closures, test runner, string interpolation, pipeline operator, option chaining, and 222 method-specific tests for String/List/Map/Option/Result
+- `pkg/checker/` — 49 tests covering type checking, effects, specs, and error diagnostics
+- `pkg/module/` — 17 tests covering module resolution, initialization ordering, cycle detection
+- `pkg/interpreter/` — 738 tests covering:
+  - Core interpreter (values, environment, expressions, statements, control flow, builtins, structs, enums, match, closures, test runner, string interpolation, pipeline operator, option chaining)
+  - 222 method-specific tests for String/List/Map/Option/Result
+  - 64 advanced import/module system tests
+  - 65 stdlib tests (regex, collections, random, format, result, option, iter)
+  - 222 effect system tests (file, time, env, net, log, composition, mocking)
 
 ### Round-Trip Guarantee
 

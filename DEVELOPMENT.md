@@ -98,19 +98,29 @@ aura-toolchain/
 │   │   ├── checker.go           # Multi-pass type checker
 │   │   ├── errors.go            # AI-parseable structured errors
 │   │   └── checker_test.go      # 48 tests
-│   └── interpreter/             # [Phase 3+4.1] Interpreter + Runtime Methods ✅
+│   ├── module/                  # [Phase 4.2] Module system ✅
+│   │   └── resolver.go          # Import resolution, cycle detection, init ordering
+│   └── interpreter/             # [Phase 3+4] Interpreter + Runtime + Stdlib + Effects ✅
 │       └── value.go             # Value system (Int, Float, String, Bool, etc.)
 │       └── env.go               # Environment with scope chain
 │       └── eval.go              # Expression/statement evaluator
-│       └── interpreter.go       # Module execution & builtins
+│       └── interpreter.go       # Module execution, builtins & stdlib registration
 │       └── test.go              # Test runner
 │       └── methods.go           # Method dispatch registry
 │       └── methods_string.go    # 22 String methods
 │       └── methods_list.go      # 27 List methods + helpers
 │       └── methods_map.go       # 24 Map methods
 │       └── methods_option.go    # 17 Option + 18 Result methods
-│       └── interpreter_test.go  # 127 core tests
+│       └── effect.go            # Effect system: EffectContext, 5 providers
+│       └── stdlib_*.go          # 16 stdlib module implementations
+│       └── interpreter_test.go  # Core interpreter tests
 │       └── methods_test.go      # 222 method tests
+│       └── import_advanced_test.go  # 64 module system tests
+│       └── stdlib_complete_test.go  # 65 stdlib tests
+│       └── effect_test.go       # 48 effect foundation tests
+│       └── time_env_test.go     # 66 time/env tests
+│       └── effect_composition_test.go  # 54 composition tests
+│       └── net_log_test.go      # 54 network/logging tests
 ├── testdata/                    # Sample .aura files
 ├── user_docs/                   # User-facing documentation
 ├── ROADMAP.md                   # Development roadmap
@@ -394,6 +404,77 @@ go tool cover -html=coverage.out
 [x] Query/conversion: contains, contains_err, ok, err, to_option
 ```
 
+### Phase 4.2: Module System & Standard Library ✅ COMPLETE
+
+> Implemented complete module/import system and 12 pure computation stdlib modules with 70 functions.
+> 146 new tests — 614 total tests across all packages.
+
+#### Module System (`pkg/module/resolver.go`)
+```
+[x] Import resolution with namespace management
+[x] Named imports and aliasing
+[x] Import cycle detection with path reporting
+[x] Module initialization ordering
+[x] Deep dependency chain handling
+[x] 17 tests
+```
+
+#### Standard Library Modules (12 pure computation modules)
+```
+[x] std.math — 8 functions + constants (pi, e, inf, nan)
+[x] std.string — 4 functions (join, split, replace, repeat)
+[x] std.io — 3 functions (print, println, format)
+[x] std.testing — 10 base functions (assert, assert_eq, etc.)
+[x] std.json — 2 functions (parse, stringify with pretty-print)
+[x] std.regex — 6 functions (match, find, find_all, replace, split, compile)
+[x] std.collections — 9 functions (range, zip_with, partition, group_by, etc.)
+[x] std.random — 6 functions (int, float, choice, shuffle, sample, seed)
+[x] std.format — 7 functions (pad_left, pad_right, center, truncate, wrap, indent, dedent)
+[x] std.result — 5 functions (all_ok, any_ok, collect, partition_results, from_option)
+[x] std.option — 5 functions (all_some, any_some, collect, first_some, from_result)
+[x] std.iter — 5 functions (cycle, repeat, chain, interleave, pairwise)
+```
+
+### Phase 4.3: Effect Runtime ✅ COMPLETE
+
+> Implemented complete effect system with 5 providers (Real + Mock), 34 effect-based stdlib functions,
+> effect composition, and comprehensive mocking framework.
+> 222 effect-related tests — 875 total tests across all packages.
+
+#### Effect System Infrastructure (`effect.go`)
+```
+[x] EffectContext with provider pattern
+[x] FileProvider (Real: os filesystem | Mock: in-memory)
+[x] TimeProvider (Real: time package | Mock: controllable clock)
+[x] EnvProvider (Real: os env vars | Mock: in-memory)
+[x] NetProvider (Real: net/http | Mock: configurable responses)
+[x] LogProvider (Real: stdout | Mock: in-memory storage)
+[x] Clone, Derive, DeriveWithNetLog context manipulation
+[x] EffectStack for nested effect scopes
+[x] MockBuilder fluent API for test contexts
+[x] Pre-configured fixtures (EmptyMockContext, FixtureWithFiles, etc.)
+```
+
+#### Effect-Based Standard Library (5 modules, 34 functions)
+```
+[x] std.file — 9 functions (read, write, append, exists, delete, list_dir, create_dir, is_file, is_dir)
+[x] std.time — 8 functions (now, unix, millis, sleep, format, parse, add, diff)
+[x] std.env — 6 functions (get, set, remove, has, all, args)
+[x] std.net — 5 functions (get, post, put, delete, request)
+[x] std.log — 6 functions (info, warn, error, debug, with_context, get_logs)
+```
+
+#### Effect-Aware Testing (`stdlib_testing.go` additions)
+```
+[x] with_mock_effects(fn) — execute in empty mock context
+[x] with_effects(config, fn) — execute with custom mock config
+[x] assert_file_exists(path), assert_file_content(path, expected)
+[x] assert_file_contains(path, substring), assert_no_file(path)
+[x] assert_env_var(key, expected)
+[x] mock_time(timestamp), advance_time(seconds), get_mock_time()
+[x] reset_effects(), get_env(key)
+```
+
 ---
 
 ## Testing Strategy
@@ -453,7 +534,8 @@ Each package should have a **single, clear responsibility**:
 - `symbols` — Symbol table with hierarchical scope management. Used by the checker.
 - `types` — Type system representation, equality, subtyping, and registry. Used by the checker.
 - `checker` — Multi-pass type checker integrating symbols, types, and effect tracking. Depends on parser output.
-- `interpreter` — Tree-walk interpreter. Evaluates AST directly: value system, environment/scope chain, expression/statement evaluation, builtins, test runner, string interpolation, pipeline operator, option chaining. Includes method dispatch registry with 108+ built-in methods for String, List, Map, Option, and Result types. Depends on `ast`, `token`, `lexer`, `parser`. 349 tests.
+- `module` — Module resolution, import cycle detection, initialization ordering. Used by the interpreter. 17 tests.
+- `interpreter` — Tree-walk interpreter with complete runtime. Evaluates AST directly: value system, environment/scope chain, expression/statement evaluation, builtins, test runner, string interpolation, pipeline operator, option chaining. Includes method dispatch registry with 108+ built-in methods, 17 stdlib modules with 117 functions, and effect system with 5 mockable providers (File, Time, Env, Net, Log). Depends on `ast`, `token`, `lexer`, `parser`, `module`. 738 tests.
 
 ### Naming Conventions
 

@@ -1,9 +1,10 @@
 # Aura Method Reference
 
-> **Version:** 0.8.0 (Phase 4.3 — Effect Runtime COMPLETE)
-> **Total Methods:** 108+ built-in methods + 95 stdlib functions  
+> **Version:** 0.8.0 (Phase 4 — Runtime & Standard Library COMPLETE)
+> **Total Methods:** 108+ built-in methods + 117 stdlib functions  
 > **Types Covered:** String (22) · List (27) · Map (24) · Option (17) · Result (18)  
-> **Stdlib Modules:** math · string · io · testing · json · regex · collections · random · format · result · option · iter · file · time · env · net · log
+> **Stdlib Modules:** math · string · io · testing · json · regex · collections · random · format · result · option · iter · file · time · env · net · log  
+> **Tests:** 875 total across all packages
 
 ---
 

@@ -6,6 +6,86 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [v0.8.0] — 2026-03-22
+
+### Phase 4 Complete: Runtime & Standard Library — COMPLETE
+
+Major release completing all of Phase 4 — the full runtime, standard library, and effect system for Aura.
+
+### Added
+
+#### Phase 4.2: Module System & Standard Library (v0.6.0)
+
+##### Module System (`pkg/module/resolver.go`)
+- Complete import resolution with namespace management
+- Named imports and aliasing (`import std.math as m`)
+- Import cycle detection with path reporting
+- Module initialization ordering
+- 17 tests in `pkg/module/`
+
+##### Pure Computation Standard Library — 12 modules, 70 functions
+- `std.math` — 8 functions: `abs`, `max`, `min`, `floor`, `ceil`, `round`, `sqrt`, `pow` + constants (`pi`, `e`, `inf`, `nan`)
+- `std.string` — 4 functions: `join`, `split`, `replace`, `repeat`
+- `std.io` — 3 functions: `print`, `println`, `format`
+- `std.testing` — 10 base functions: `assert`, `assert_eq`, `assert_ne`, `assert_true`, `assert_false`, `assert_some`, `assert_none`, `assert_ok`, `assert_err`, `run_tests`
+- `std.json` — 2 functions: `parse`, `stringify` (with pretty-print support)
+- `std.regex` — 6 functions: `match`, `find`, `find_all`, `replace`, `split`, `compile`
+- `std.collections` — 9 functions: `range`, `zip_with`, `partition`, `group_by`, `chunk`, `take`, `drop`, `take_while`, `drop_while`
+- `std.random` — 6 functions: `int`, `float`, `choice`, `shuffle`, `sample`, `seed`
+- `std.format` — 7 functions: `pad_left`, `pad_right`, `center`, `truncate`, `wrap`, `indent`, `dedent`
+- `std.result` — 5 functions: `all_ok`, `any_ok`, `collect`, `partition_results`, `from_option`
+- `std.option` — 5 functions: `all_some`, `any_some`, `collect`, `first_some`, `from_result`
+- `std.iter` — 5 functions: `cycle`, `repeat`, `chain`, `interleave`, `pairwise`
+
+##### Tests
+- 64 advanced import/module system tests in `import_advanced_test.go`
+- 65 stdlib tests in `stdlib_complete_test.go`
+- 17 module resolution tests in `pkg/module/`
+
+#### Phase 4.3: Effect Runtime (v0.8.0)
+
+##### Effect System Infrastructure (`effect.go`)
+- `EffectContext` with provider pattern — thread-safe capability injection
+- 5 effect providers, each with Real + Mock implementations:
+  - **FileProvider** — Real: `os` filesystem | Mock: in-memory filesystem
+  - **TimeProvider** — Real: `time` package | Mock: controllable clock
+  - **EnvProvider** — Real: `os` env vars | Mock: in-memory variables
+  - **NetProvider** — Real: `net/http` | Mock: configurable responses with request logging
+  - **LogProvider** — Real: stdout | Mock: in-memory storage with query methods
+
+##### Effect-Based Standard Library — 5 modules, 34 functions
+- `std.file` — 9 functions: `read`, `write`, `append`, `exists`, `delete`, `list_dir`, `create_dir`, `is_file`, `is_dir`
+- `std.time` — 8 functions: `now`, `unix`, `millis`, `sleep`, `format`, `parse`, `add`, `diff`
+- `std.env` — 6 functions: `get`, `set`, `remove`, `has`, `all`, `args`
+- `std.net` — 5 functions: `get`, `post`, `put`, `delete`, `request`
+- `std.log` — 6 functions: `info`, `warn`, `error`, `debug`, `with_context`, `get_logs`
+
+##### Effect Composition & Mocking Framework
+- `Clone()`, `Derive()`, `DeriveWithNetLog()` — context manipulation
+- `EffectStack` — nested effect scopes
+- `MockBuilder` — fluent API for configuring test contexts
+- Pre-configured fixtures: `EmptyMockContext`, `FixtureWithFiles`, etc.
+- 13 additional effect-aware `std.testing` functions (`with_mock_effects`, `with_effects`, `assert_file_exists`, `mock_time`, `advance_time`, etc.)
+
+##### Tests
+- 48 effect foundation tests in `effect_test.go`
+- 66 time/env tests in `time_env_test.go`
+- 54 effect composition tests in `effect_composition_test.go`
+- 54 network/logging tests in `net_log_test.go`
+- **Total: 875 tests** across all packages (up from 468)
+
+### Summary
+
+| Metric | Value |
+|--------|-------|
+| Built-in methods | 108+ across 5 types |
+| Standard library modules | 17 |
+| Standard library functions | 117 |
+| Effect providers | 5 (File, Time, Env, Net, Log) |
+| Total tests | 875 |
+
+---
+
 ## [v0.4.0] — 2026-03-20
 
 ### Phase 4.1: Core Runtime Methods — COMPLETE
