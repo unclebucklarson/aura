@@ -1,84 +1,103 @@
-# AI Next Session — Aura Project Status
+# AI Next Session Guide
 
-## Current Status: Phase 4.3 Chunk 2 COMPLETE
+## Current Status: Phase 4.3 Chunk 3 COMPLETE
 
 ### Test Metrics
-- **Total interpreter tests: 619** (66 new in this chunk)
+- **Total interpreter tests: 679** (54 new tests from this chunk)
 - All tests passing ✅
 
-### What Was Completed (Chunk 2)
+### What Was Completed (Chunk 3 - Effect Composition & Mocking Framework)
 
-#### Effect System Extensions (effect.go)
-- **TimeProvider interface**: Now(), NowNano(), Sleep(ms)
-- **EnvProvider interface**: Get(), Set(), Has(), List(), Cwd(), Args()
-- **RealTimeProvider**: Uses Go's `time` package
-- **RealEnvProvider**: Uses Go's `os` package
-- **MockTimeProvider**: Controllable time, sleep logging, time advancement
-- **MockEnvProvider**: In-memory environment, configurable cwd/args
-- **EffectContext updates**: Added Time() and Env() accessors, WithTime(), WithEnv()
+#### 1. Effect Composition Infrastructure (effect.go)
+- `Clone()` - Deep copy of EffectContext (shares provider references)
+- `Derive(file, time, env)` - Create derived context with selective overrides (nil = keep parent)
+- `EffectStack` - Stack-based context management for nested effect scopes
+  - `NewEffectStack(initial)`, `Push()`, `Pop()`, `Current()`, `Depth()`
+  - Base context protection (Pop never removes the base)
 
-#### std.time Module (stdlib_time.go) — 8 functions
-- `now()` → Int — Current Unix timestamp
-- `unix()` → Int — Alias for now()
-- `millis()` → Int — Current time in milliseconds
-- `sleep(ms)` → None — Sleep for milliseconds
-- `format(timestamp, format)` → String — Format timestamp
-- `parse(str, format)` → Result[Int, String] — Parse timestamp
-- `add(timestamp, seconds)` → Int — Add seconds
-- `diff(ts1, ts2)` → Int — Difference in seconds
-- Aura format tokens: %Y, %m, %d, %H, %M, %S, %Z
+#### 2. Mock Builder (Fluent API) (effect.go)
+- `NewMockBuilder()` - Start building a mock context
+- Fluent methods: `WithFile()`, `WithDir()`, `WithFiles()`, `WithTime()`, `WithEnvVar()`, `WithEnvVars()`, `WithCwd()`, `WithArgs()`
+- Provider replacement: `WithFileProvider()`, `WithTimeProvider()`, `WithEnvProvider()`
+- `Build()` - Finalize and return the configured EffectContext
 
-#### std.env Module (stdlib_env.go) — 6 functions
-- `get(key)` → Option[String] — Get environment variable
-- `set(key, value)` → None — Set environment variable
-- `has(key)` → Bool — Check existence
-- `list()` → Map[String, String] — All variables
-- `cwd()` → String — Current working directory
-- `args()` → List[String] — Command line arguments
+#### 3. Pre-configured Fixtures (effect.go)
+- `EmptyMockContext()` - Fresh empty mock
+- `FixtureWithFiles(files)` - Mock with pre-populated files
+- `FixtureWithTime(sec)` - Mock with specific time
+- `FixtureWithEnv(vars)` - Mock with environment variables
+- `FixtureComplete(files, time, env)` - Fully configured mock
 
-#### Test Coverage (time_env_test.go) — 66 tests
-- TimeProvider tests (Real and Mock): 11 tests
-- EnvProvider tests (Real and Mock): 13 tests
-- EffectContext integration: 6 tests
-- std.time function tests: 17 tests
-- std.env function tests: 14 tests
-- Format/parse roundtrip tests: 2 tests
-- Integration tests: 3 tests
+#### 4. Assertion Helpers (effect.go - Go-level)
+- `AssertFileExists(ctx, path)`, `AssertFileContent(ctx, path, expected)`
+- `AssertEnvVar(ctx, key, expected)`, `AssertMockTime(ctx, expected)`
+- `GetMockFileProvider(ctx)`, `GetMockTimeProvider(ctx)`, `GetMockEnvProvider(ctx)`
+
+#### 5. Testing Integration (stdlib_testing.go - Aura-level)
+- `with_mock_effects(fn)` - Run function with fresh mock effects
+- `with_effects(config, fn)` - Run function with custom mock effects (config map)
+- `assert_file_exists(path)`, `assert_file_content(path, expected)`
+- `assert_file_contains(path, substr)`, `assert_no_file(path)`
+- `assert_env_var(key, expected)`
+- `mock_time(timestamp)`, `advance_time(seconds)`
+- `reset_effects()`, `get_mock_time()`, `get_env(key)`
+
+#### 6. Test Coverage (effect_composition_test.go)
+- 10 Effect Context composition tests (Clone, Derive)
+- 4 EffectStack tests
+- 14 MockBuilder tests (fluent API, chaining, providers)
+- 5 Fixture tests
+- 7 Assertion helper tests
+- 12 Testing integration tests (stdlib_testing effect helpers)
+- 3 Integration tests (composition + interpreter)
+- 5 Edge case / error handling tests
 
 ### Files Modified
-1. `pkg/interpreter/effect.go` — Added TimeProvider, EnvProvider interfaces + Real/Mock implementations
-2. `pkg/interpreter/interpreter.go` — Registered std.time and std.env modules
-3. `user_docs/method_reference.md` — Added std.time and std.env documentation
+- `pkg/interpreter/effect.go` - Added composition, MockBuilder, fixtures, assertions
+- `pkg/interpreter/stdlib_testing.go` - Added 13 effect-aware testing functions
+- `pkg/interpreter/interpreter.go` - Merged effect exports into std.testing
+- `user_docs/method_reference.md` - Updated version, added testing effects docs
 
 ### Files Created
-1. `pkg/interpreter/stdlib_time.go` — std.time module (8 functions)
-2. `pkg/interpreter/stdlib_env.go` — std.env module (6 functions)
-3. `pkg/interpreter/time_env_test.go` — 66 tests
+- `pkg/interpreter/effect_composition_test.go` - 54 new tests
 
-### Previous Completions
-- **Chunk 1**: Effect system foundation + std.file (9 functions, 48 tests)
-- **Phases 1-3**: Core language, parser, lexer, token system
-- **Phase 4.1**: 108+ methods (String, List, Map, Option, Result)
-- **Phase 4.2**: Import system + 13 stdlib modules
+### Architecture: Effect System Pattern
+```
+EffectContext
+├── FileProvider (Real / Mock)
+├── TimeProvider (Real / Mock)
+└── EnvProvider  (Real / Mock)
+
+MockBuilder (Fluent API)
+├── WithFile() / WithFiles() / WithDir()
+├── WithTime()
+├── WithEnvVar() / WithEnvVars()
+├── WithCwd() / WithArgs()
+└── Build() → EffectContext
+
+EffectStack
+├── Push(ctx) / Pop() → nested scoping
+├── Current() → active context
+└── Depth() → stack size
+
+std.testing (Aura-level)
+├── with_mock_effects(fn) / with_effects(config, fn)
+├── assert_file_exists/content/contains/no_file
+├── assert_env_var
+├── mock_time / advance_time / get_mock_time
+├── reset_effects / get_env
+└── All original assertions preserved
+```
 
 ### Recommended Next Steps
-1. **Phase 4.3 Chunk 3**: Effect composition and advanced mocking framework
-2. **Phase 4.3 Chunk 4**: std.net + std.log modules
-3. **Phase 5**: Type system enhancements
 
-### Architecture Notes — Effect System Pattern
-```
-Interpreter
-  └── EffectContext
-        ├── FileProvider  (Real: os.* | Mock: in-memory)
-        ├── TimeProvider  (Real: time.* | Mock: controllable clock)
-        └── EnvProvider   (Real: os.* | Mock: in-memory env)
-```
+#### Phase 4.3 Chunk 4: std.net and std.log
+- Network provider interface (HTTP GET/POST)
+- Logging provider interface
+- Mock implementations for both
+- Integration with effect system
 
-Each provider:
-- Has a Go interface defining operations
-- Has a Real implementation (production)
-- Has a Mock implementation (testing)
-- Is injected via EffectContext
-- Is captured by closure in stdlib module factory functions
-- Total stdlib functions: 71 across 15 modules
+#### Phase 5: Type System Enhancements
+- Generic types
+- Trait implementations
+- Advanced pattern matching

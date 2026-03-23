@@ -617,3 +617,277 @@ func (m *MockEnvProvider) Args() []string {
         copy(result, m.args)
         return result
 }
+
+// --- Effect Composition Infrastructure ---
+
+// Clone creates a deep copy of the EffectContext with all the same providers.
+func (ec *EffectContext) Clone() *EffectContext {
+        return &EffectContext{
+                file: ec.file,
+                time: ec.time,
+                envp: ec.envp,
+        }
+}
+
+// Derive creates a new EffectContext that inherits from the current one,
+// but allows overriding specific providers. nil arguments keep the parent's provider.
+func (ec *EffectContext) Derive(file FileProvider, time TimeProvider, env EnvProvider) *EffectContext {
+        derived := ec.Clone()
+        if file != nil {
+                derived.file = file
+        }
+        if time != nil {
+                derived.time = time
+        }
+        if env != nil {
+                derived.envp = env
+        }
+        return derived
+}
+
+// EffectStack manages a stack of EffectContexts, enabling nested effect scopes.
+type EffectStack struct {
+        mu     sync.RWMutex
+        stack  []*EffectContext
+}
+
+// NewEffectStack creates a new EffectStack with an initial context.
+func NewEffectStack(initial *EffectContext) *EffectStack {
+        return &EffectStack{
+                stack: []*EffectContext{initial},
+        }
+}
+
+// Current returns the top-most EffectContext on the stack.
+func (es *EffectStack) Current() *EffectContext {
+        es.mu.RLock()
+        defer es.mu.RUnlock()
+        if len(es.stack) == 0 {
+                return nil
+        }
+        return es.stack[len(es.stack)-1]
+}
+
+// Push adds a new EffectContext to the stack.
+func (es *EffectStack) Push(ctx *EffectContext) {
+        es.mu.Lock()
+        defer es.mu.Unlock()
+        es.stack = append(es.stack, ctx)
+}
+
+// Pop removes and returns the top EffectContext from the stack.
+// Returns nil if the stack has only one element (the base context is preserved).
+func (es *EffectStack) Pop() *EffectContext {
+        es.mu.Lock()
+        defer es.mu.Unlock()
+        if len(es.stack) <= 1 {
+                return nil // never pop the base context
+        }
+        top := es.stack[len(es.stack)-1]
+        es.stack = es.stack[:len(es.stack)-1]
+        return top
+}
+
+// Depth returns the number of contexts on the stack.
+func (es *EffectStack) Depth() int {
+        es.mu.RLock()
+        defer es.mu.RUnlock()
+        return len(es.stack)
+}
+
+// --- Mock Builder (Fluent API) ---
+
+// MockBuilder provides a fluent API for building mock EffectContexts.
+type MockBuilder struct {
+        ctx *EffectContext
+}
+
+// NewMockBuilder creates a new MockBuilder starting with a fresh mock context.
+func NewMockBuilder() *MockBuilder {
+        return &MockBuilder{
+                ctx: NewMockEffectContext(),
+        }
+}
+
+// WithFile adds a file to the mock filesystem.
+func (mb *MockBuilder) WithFile(path, content string) *MockBuilder {
+        if fp, ok := mb.ctx.file.(*MockFileProvider); ok {
+                fp.AddFile(path, content)
+        }
+        return mb
+}
+
+// WithDir adds a directory to the mock filesystem.
+func (mb *MockBuilder) WithDir(path string) *MockBuilder {
+        if fp, ok := mb.ctx.file.(*MockFileProvider); ok {
+                fp.AddDir(path)
+        }
+        return mb
+}
+
+// WithTime sets the mock time to a specific Unix timestamp (seconds).
+func (mb *MockBuilder) WithTime(sec int64) *MockBuilder {
+        if tp, ok := mb.ctx.time.(*MockTimeProvider); ok {
+                tp.SetTime(sec)
+        }
+        return mb
+}
+
+// WithEnvVar sets an environment variable in the mock environment.
+func (mb *MockBuilder) WithEnvVar(key, value string) *MockBuilder {
+        if ep, ok := mb.ctx.envp.(*MockEnvProvider); ok {
+                ep.SetVar(key, value)
+        }
+        return mb
+}
+
+// WithCwd sets the current working directory in the mock environment.
+func (mb *MockBuilder) WithCwd(cwd string) *MockBuilder {
+        if ep, ok := mb.ctx.envp.(*MockEnvProvider); ok {
+                ep.SetCwd(cwd)
+        }
+        return mb
+}
+
+// WithArgs sets the command-line arguments in the mock environment.
+func (mb *MockBuilder) WithArgs(args []string) *MockBuilder {
+        if ep, ok := mb.ctx.envp.(*MockEnvProvider); ok {
+                ep.SetArgs(args)
+        }
+        return mb
+}
+
+// WithFiles adds multiple files to the mock filesystem.
+func (mb *MockBuilder) WithFiles(files map[string]string) *MockBuilder {
+        if fp, ok := mb.ctx.file.(*MockFileProvider); ok {
+                for path, content := range files {
+                        fp.AddFile(path, content)
+                }
+        }
+        return mb
+}
+
+// WithEnvVars sets multiple environment variables in the mock environment.
+func (mb *MockBuilder) WithEnvVars(vars map[string]string) *MockBuilder {
+        if ep, ok := mb.ctx.envp.(*MockEnvProvider); ok {
+                for k, v := range vars {
+                        ep.SetVar(k, v)
+                }
+        }
+        return mb
+}
+
+// WithFileProvider replaces the file provider entirely.
+func (mb *MockBuilder) WithFileProvider(fp FileProvider) *MockBuilder {
+        mb.ctx.file = fp
+        return mb
+}
+
+// WithTimeProvider replaces the time provider entirely.
+func (mb *MockBuilder) WithTimeProvider(tp TimeProvider) *MockBuilder {
+        mb.ctx.time = tp
+        return mb
+}
+
+// WithEnvProvider replaces the env provider entirely.
+func (mb *MockBuilder) WithEnvProvider(ep EnvProvider) *MockBuilder {
+        mb.ctx.envp = ep
+        return mb
+}
+
+// Build returns the configured EffectContext.
+func (mb *MockBuilder) Build() *EffectContext {
+        return mb.ctx
+}
+
+// --- Pre-configured Fixtures ---
+
+// EmptyMockContext creates a mock context with no files, default time, no env vars.
+// This is the same as NewMockEffectContext().
+func EmptyMockContext() *EffectContext {
+        return NewMockEffectContext()
+}
+
+// FixtureWithFiles creates a mock context pre-populated with files.
+func FixtureWithFiles(files map[string]string) *EffectContext {
+        mb := NewMockBuilder()
+        mb.WithFiles(files)
+        return mb.Build()
+}
+
+// FixtureWithTime creates a mock context with a specific time.
+func FixtureWithTime(sec int64) *EffectContext {
+        mb := NewMockBuilder()
+        mb.WithTime(sec)
+        return mb.Build()
+}
+
+// FixtureWithEnv creates a mock context with specific environment variables.
+func FixtureWithEnv(vars map[string]string) *EffectContext {
+        mb := NewMockBuilder()
+        mb.WithEnvVars(vars)
+        return mb.Build()
+}
+
+// FixtureComplete creates a mock context with files, time, and env vars all configured.
+func FixtureComplete(files map[string]string, timeSec int64, envVars map[string]string) *EffectContext {
+        mb := NewMockBuilder()
+        mb.WithFiles(files).WithTime(timeSec).WithEnvVars(envVars)
+        return mb.Build()
+}
+
+// --- Effect Assertion Helpers (for Go tests) ---
+
+// AssertFileExists checks that a file exists in the mock filesystem.
+// Returns true if it exists, false otherwise.
+func AssertFileExists(ctx *EffectContext, path string) bool {
+        return ctx.File().Exists(path)
+}
+
+// AssertFileContent checks that a file has the expected content.
+// Returns true if the content matches, false otherwise.
+func AssertFileContent(ctx *EffectContext, path string, expected string) bool {
+        content, err := ctx.File().ReadFile(path)
+        if err != nil {
+                return false
+        }
+        return content == expected
+}
+
+// AssertEnvVar checks that an environment variable has the expected value.
+func AssertEnvVar(ctx *EffectContext, key string, expected string) bool {
+        val, ok := ctx.Env().Get(key)
+        if !ok {
+                return false
+        }
+        return val == expected
+}
+
+// AssertMockTime checks that the mock time matches the expected value.
+func AssertMockTime(ctx *EffectContext, expected int64) bool {
+        return ctx.Time().Now() == expected
+}
+
+// GetMockFileProvider returns the MockFileProvider from a context, or nil if not mock.
+func GetMockFileProvider(ctx *EffectContext) *MockFileProvider {
+        if fp, ok := ctx.file.(*MockFileProvider); ok {
+                return fp
+        }
+        return nil
+}
+
+// GetMockTimeProvider returns the MockTimeProvider from a context, or nil if not mock.
+func GetMockTimeProvider(ctx *EffectContext) *MockTimeProvider {
+        if tp, ok := ctx.time.(*MockTimeProvider); ok {
+                return tp
+        }
+        return nil
+}
+
+// GetMockEnvProvider returns the MockEnvProvider from a context, or nil if not mock.
+func GetMockEnvProvider(ctx *EffectContext) *MockEnvProvider {
+        if ep, ok := ctx.envp.(*MockEnvProvider); ok {
+                return ep
+        }
+        return nil
+}

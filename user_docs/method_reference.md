@@ -1,7 +1,7 @@
 # Aura Method Reference
 
-> **Version:** 0.6.1 (Phase 4.3 — Effect System + std.file + std.time + std.env)
-> **Total Methods:** 108+ built-in methods + 71 stdlib functions  
+> **Version:** 0.7.0 (Phase 4.3 — Effect Composition & Mocking Framework)
+> **Total Methods:** 108+ built-in methods + 84 stdlib functions  
 > **Types Covered:** String (22) · List (27) · Map (24) · Option (17) · Result (18)  
 > **Stdlib Modules:** math · string · io · testing · json · regex · collections · random · format · result · option · iter · file · time · env
 
@@ -1574,4 +1574,75 @@ let args = env.args()           // List[String]
 | `has` | `(key: String)` | `Bool` | Check if variable exists |
 | `list` | `()` | `Map[String, String]` | List all environment variables |
 | `cwd` | `()` | `String` | Current working directory |
-| `args` | `()` | `List[String]` | Command line arguments |
+| `args` | `()` | `List[String]` | Command-line arguments |
+
+---
+
+## std.testing — Effect-Aware Testing Helpers
+
+> Effect-aware testing utilities for testing code that uses `std.file`, `std.time`, and `std.env`.
+> These functions enable AI-driven TDD with minimal friction by providing mock effect contexts.
+
+#### Usage
+
+```aura
+import std.testing
+
+// Run a test with fresh mock effects (empty filesystem, default time, no env vars)
+testing.with_mock_effects(fn() {
+    // Inside here, all effects are mocked
+    file.write("/test.txt", "hello")
+    testing.assert_file_exists("/test.txt")
+    testing.assert_file_content("/test.txt", "hello")
+})
+
+// Run with custom effect configuration
+testing.with_effects({
+    "time": 1700000000,
+    "files": { "/config.json": '{"key": "val"}' },
+    "env": { "MODE": "test" },
+    "cwd": "/project",
+    "args": ["aura", "--test"]
+}, fn() {
+    testing.assert_env_var("MODE", "test")
+    let t = testing.get_mock_time()
+    testing.assert_eq(t, 1700000000)
+})
+
+// Set and advance mock time
+testing.with_mock_effects(fn() {
+    testing.mock_time(1000)
+    testing.advance_time(60)
+    testing.assert_eq(testing.get_mock_time(), 1060)
+})
+
+// Reset effects to clean state
+testing.reset_effects()
+```
+
+#### Effect Testing Functions
+
+| Function | Args | Returns | Description |
+|----------|------|---------|-------------|
+| `with_mock_effects` | `(fn)` | `Any` | Run function with fresh mock effects |
+| `with_effects` | `(config: Map, fn)` | `Any` | Run function with custom mock effects |
+| `assert_file_exists` | `(path: String)` | `Bool` | Assert file exists in mock filesystem |
+| `assert_file_content` | `(path: String, expected: String)` | `Bool` | Assert file has expected content |
+| `assert_file_contains` | `(path: String, substr: String)` | `Bool` | Assert file contains substring |
+| `assert_no_file` | `(path: String)` | `Bool` | Assert file does NOT exist |
+| `assert_env_var` | `(key: String, expected: String)` | `Bool` | Assert environment variable value |
+| `mock_time` | `(timestamp: Int)` | `None` | Set mock time to specific Unix timestamp |
+| `advance_time` | `(seconds: Int)` | `None` | Advance mock time by N seconds |
+| `reset_effects` | `()` | `None` | Reset all mock effects to clean state |
+| `get_mock_time` | `()` | `Int` | Get current mock time |
+| `get_env` | `(key: String)` | `Option[String]` | Get environment variable value |
+
+#### `with_effects` Config Map Keys
+
+| Key | Type | Description |
+|-----|------|-------------|
+| `"time"` | `Int` | Unix timestamp for mock time |
+| `"files"` | `Map[String, String]` | Files to pre-populate (path → content) |
+| `"env"` | `Map[String, String]` | Environment variables to set |
+| `"cwd"` | `String` | Current working directory |
+| `"args"` | `List[String]` | Command-line arguments |

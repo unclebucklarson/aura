@@ -566,6 +566,11 @@ func (interp *Interpreter) createStdModule(importPath string) *ModuleVal {
 
         case "std.testing":
                 exports = createStdTestingExports()
+                // Merge in effect-aware testing helpers
+                effectExports := createStdTestingEffectExports(interp)
+                for k, v := range effectExports {
+                        exports[k] = v
+                }
 
         case "std.json":
                 exports = createStdJsonExports()
