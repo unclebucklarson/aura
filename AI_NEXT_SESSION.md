@@ -85,20 +85,52 @@ Standard Library Modules (17 total):
 
 ---
 
-## Recommended Next Steps
+## Strategic Plan — Path to v2.0.0
 
-### Phase 5: Advanced Tooling & Ecosystem
-1. **LSP Server** — Language server protocol for IDE support (go-to-definition, hover, diagnostics)
-2. **Package Manager** — Module resolution, dependency management, `aura.toml`
-3. **AI Integration** — Spec-to-implementation generation, AST-aware prompts
-4. **Documentation Generator** — Extract doc comments, generate HTML/Markdown
-5. **REPL Improvements** — Effect-aware interactive mode
+### Recommended Implementation Order
 
-### Other Options
-- **Type System Enhancements** — Generics, better inference, interface types
-- **Concurrency Model** — Async/await, channels, effect-aware concurrency
-- **Additional stdlib** — std.crypto, std.encoding, std.uuid
-- **Compiler Backend** — WASM or native compilation
+The following order maximizes value delivery while building on completed foundations:
+
+```
+Phase 3.2 → Phase 3.3 → Phase 5 → Phase 6
+Pattern     Advanced     Tooling &   Compiler &
+Matching    Type System  Ecosystem   Optimization
+(v0.9.0)    (v1.0.0)     (v1.1.0)    (v2.0.0)
+```
+
+### Why This Order?
+
+1. **Phase 3.2 (Pattern Matching) first** — Pattern matching is already partially implemented (basic `match` works). Completing it with exhaustiveness checking, nested patterns, guard clauses, and destructuring will immediately improve the expressiveness of existing code. This is a high-impact, bounded-scope enhancement.
+
+2. **Phase 3.3 (Advanced Type Features) second** — Generics, type inference improvements, and interface types build on the type system already in place. These are prerequisites for writing truly reusable libraries and are critical for the AI code generation workflow (AI needs strong types to generate correct code).
+
+3. **Phase 5 (Tooling & Ecosystem) third** — LSP, package manager, and AI integration are the "developer experience" layer. They're most valuable *after* the language features are stable. Building tooling on top of an incomplete type system would require rework.
+
+4. **Phase 6 (Compiler & Optimization) last** — The tree-walk interpreter is sufficient for correctness and development. Compilation to bytecode/native is a performance optimization that only matters at scale. It should come after the language is feature-complete.
+
+### Phase Timeline & Milestones
+
+| Phase | Focus | Effort | Version | Key Deliverables |
+|-------|-------|--------|---------|------------------|
+| **3.2** | Pattern Matching | 2–3 weeks | **v0.9.0** | Exhaustive patterns, guards, nested destructuring, `when` clauses |
+| **3.3** | Advanced Type Features | 3–4 weeks | **v1.0.0** | Generics, improved inference, interface types, type constraints |
+| **5** | Tooling & Ecosystem | 4–6 weeks | **v1.1.0** | LSP server, package manager, AI integration, doc generator |
+| **6** | Compiler & Optimization | 6–8 weeks | **v2.0.0** | Bytecode compiler, VM, GC, performance optimizations |
+
+### 🎯 Next Session Priority: Phase 3.2 — Pattern Matching
+
+**Start here.** Phase 3.2 is the highest-value, lowest-risk next step.
+
+Key tasks for Phase 3.2:
+1. Nested pattern matching (patterns within patterns)
+2. Guard clauses (`when` conditions on match arms)
+3. Or-patterns (`A | B => ...`)
+4. Binding patterns (`x @ Pattern`)
+5. Exhaustiveness checking for all pattern types
+6. Destructuring in `let` bindings
+7. Wildcard patterns with type narrowing
+
+**Estimated test additions:** ~80–120 new tests
 
 ---
 

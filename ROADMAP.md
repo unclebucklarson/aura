@@ -27,13 +27,16 @@ These principles guide every phase of development. When evaluating features, tra
 
 ## Phase Overview
 
-| Phase | Name | Status | Estimated Effort |
-|-------|------|--------|------------------|
-| 1 | Syntax (Lexer, Parser, Formatter) | ✅ COMPLETE | — |
-| 2 | Semantic Analysis | ✅ COMPLETE | — |
-| 3 | Code Generation (Interpreter) | ✅ COMPLETE | — |
-| 4 | Runtime & Standard Library | ✅ COMPLETE (4.1 ✅, 4.2 ✅, 4.3 ✅) | — |
-| 5 | Advanced Tooling & Ecosystem | 🔲 Not Started | Ongoing |
+| Phase | Name | Status | Version | Estimated Effort |
+|-------|------|--------|---------|------------------|
+| 1 | Syntax (Lexer, Parser, Formatter) | ✅ COMPLETE | v0.1 | — |
+| 2 | Semantic Analysis | ✅ COMPLETE | v0.2 | — |
+| 3.1 | Tree-Walk Interpreter | ✅ COMPLETE | v0.3 | — |
+| 3.2 | Pattern Matching (Advanced) | 🔲 Not Started | v0.9.0 | 2–3 weeks |
+| 3.3 | Advanced Type Features | 🔲 Not Started | v1.0.0 | 3–4 weeks |
+| 4 | Runtime & Standard Library | ✅ COMPLETE (4.1 ✅, 4.2 ✅, 4.3 ✅) | v0.8.0 | — |
+| 5 | Advanced Tooling & Ecosystem | 🔲 Not Started | v1.1.0 | 4–6 weeks |
+| 6 | Compiler & Optimization | 🔲 Not Started | v2.0.0 | 6–8 weeks |
 
 ---
 
@@ -194,33 +197,44 @@ The tree-walk interpreter is the **highest-impact next step** for the AI-first m
 - [x] `--json` flag for structured output (AI agent consumption)
 - [x] `--dry-run` flag for validation without execution
 
-### 3.2 Bytecode Compiler (Future — Phase 5+)
+### 3.2 Pattern Matching (Advanced) — 🔲 NOT STARTED
 
-**Complexity:** Very High | **Estimate:** 6–10 weeks
+**Complexity:** Medium | **Estimate:** 2–3 weeks | **Target:** v0.9.0
 
-*Deferred. A tree-walk interpreter is sufficient for the AI-first use case where correctness and rapid feedback matter more than raw performance.*
+> 🤖 **AI optimization:** Advanced pattern matching enables AI to generate more expressive and concise code. Exhaustiveness checking provides compile-time guarantees that AI-generated match expressions handle all cases — a critical safety property.
 
-- [ ] Design a bytecode instruction set for Aura
-- [ ] Implement a bytecode compiler from the typed AST
-- [ ] Build a stack-based virtual machine
-- [ ] Implement garbage collection
-- [ ] Add debug information (source maps, breakpoints)
+**Note:** Basic `match` with enum variants and literals is already implemented in Phase 3.1. This phase completes the pattern matching system with advanced features.
 
-**Package:** `pkg/compiler`, `pkg/vm`
+- [ ] Nested patterns (patterns within patterns, e.g., `Some(Ok(x))`)
+- [ ] Guard clauses (`when` conditions on match arms)
+- [ ] Or-patterns (`A | B => ...` — match multiple patterns with one arm)
+- [ ] Binding patterns (`x @ Pattern` — bind a name while matching)
+- [ ] Exhaustiveness checking for all pattern types (not just enums)
+- [ ] Destructuring in `let` bindings (e.g., `let (x, y) = tuple`)
+- [ ] Wildcard patterns with type narrowing
+- [ ] Struct destructuring in match arms
 
-### 3.3 Transpilation to Go (Future — Phase 5+)
+**Package:** `pkg/interpreter`, `pkg/checker`
 
-**Complexity:** Medium-High | **Estimate:** 4–6 weeks
+**Estimated test additions:** ~80–120 new tests
 
-*Deferred. May revisit after the interpreter proves out the language semantics.*
+### 3.3 Advanced Type Features — 🔲 NOT STARTED
 
-- [ ] Generate Go source code from the typed Aura AST
-- [ ] Map Aura types to Go types
-- [ ] Handle indentation-based blocks → Go brace blocks
-- [ ] Implement effect tracking as Go interfaces/context injection
-- [ ] Generate Go test files from Aura test blocks
+**Complexity:** Medium-High | **Estimate:** 3–4 weeks | **Target:** v1.0.0
 
-**Package:** `pkg/codegen/golang`
+> 🤖 **AI optimization:** Generics and improved type inference allow AI to generate reusable, type-safe code. Interface types provide the contract system that AI agents need to understand API boundaries without reading implementation details.
+
+- [ ] Generic types and functions (type parameters with constraints)
+- [ ] Improved type inference (bidirectional, constraint-based)
+- [ ] Interface types (structural typing, trait-like behavior)
+- [ ] Type constraints (`where` clauses for generics)
+- [ ] Higher-kinded types (if needed for stdlib design)
+- [ ] Type aliases with generic parameters
+- [ ] Refinement type static evaluation (deferred from Phase 2)
+
+**Package:** `pkg/types`, `pkg/checker`, `pkg/interpreter`
+
+**Estimated test additions:** ~100–150 new tests
 
 ### Phase 3 Deliverables
 
@@ -233,7 +247,7 @@ The tree-walk interpreter is the **highest-impact next step** for the AI-first m
 - ✅ Pipeline operator (`|>`) evaluation
 - ✅ Option chaining (`?.`) with None short-circuiting
 
-### 3.2 Post-Phase-3 Feature Additions
+### 3.1.6 Post-Phase-3.1 Feature Additions
 
 Features added to complete the interpreter's expression support:
 
@@ -358,13 +372,17 @@ Phase 4 delivers a complete runtime and standard library for Aura:
 
 ---
 
-## Phase 5: Advanced Tooling & Ecosystem
+## Phase 5: Advanced Tooling & Ecosystem — 🔲 NOT STARTED
 
-**Goal:** Build the developer experience and ecosystem around Aura.
+**Goal:** Build the developer experience and ecosystem around Aura (LSP, Package Manager, AI Integration, Build System).
 
 > 🤖 **AI optimization:** This phase is where AI-first design pays off most. The LSP should expose spec/effect/type information as structured data for AI agents. The spec-to-implementation pipeline (§5.3) is the flagship AI feature — it's the full realization of the vibe coding workflow. Package metadata should be machine-readable so AI can discover and use libraries without human guidance.
 
-**Dependencies:** Phases 2–4 (progressive)
+**Dependencies:** Phases 3.2, 3.3 (language features should be stable before tooling)
+
+**Target:** v1.1.0
+
+**Note:** This phase focuses on *tooling and ecosystem* — developer experience, IDE support, package management, and AI workflow integration. For *compilation and performance optimization*, see Phase 6.
 
 ### 5.1 Language Server Protocol (LSP)
 
@@ -415,6 +433,100 @@ Phase 4 delivers a complete runtime and standard library for Aura:
 - [ ] Expression evaluation and pretty-printing
 - [ ] History, auto-completion, and multi-line input
 - [ ] `:type` and `:effects` introspection commands
+
+---
+
+## Phase 6: Compiler & Optimization — 🔲 NOT STARTED
+
+**Goal:** Compile Aura programs to bytecode or native code for production-grade performance.
+
+> 🤖 **AI optimization:** A bytecode compiler produces deterministic, inspectable output that AI agents can reason about. Debug information and source maps allow AI to correlate runtime errors with source locations. JIT compilation enables AI-generated code to run at near-native speed without manual optimization — the AI writes correct code, the compiler makes it fast.
+
+**Dependencies:** Phases 3.2, 3.3, 5 (language features should be stable before compilation)
+
+**Target:** v2.0.0
+
+### 6.1 Bytecode Compiler
+
+**Complexity:** High | **Estimate:** 2–3 weeks
+
+Design and implement a bytecode instruction set and compiler for Aura.
+
+- [ ] Design bytecode instruction set (stack-based)
+- [ ] Implement compiler from typed AST to bytecode
+- [ ] Constant pool for literals and identifiers
+- [ ] Function/closure compilation with upvalue capture
+- [ ] Module-level bytecode compilation
+- [ ] Debug information embedding (source locations, variable names)
+- [ ] Bytecode serialization/deserialization (`.aurac` files)
+- [ ] Bytecode disassembler for debugging
+
+**Package:** `pkg/compiler`
+
+**Expected outcome:** Aura programs compile to a portable bytecode format that can be inspected, cached, and distributed.
+
+### 6.2 Virtual Machine (VM)
+
+**Complexity:** High | **Estimate:** 2–3 weeks
+
+Build a stack-based virtual machine to execute Aura bytecode.
+
+- [ ] Stack-based execution engine
+- [ ] Call frame management (functions, closures, methods)
+- [ ] Upvalue handling for closures
+- [ ] Effect system integration (capability passing through VM)
+- [ ] Runtime type checking (for dynamic dispatch)
+- [ ] Exception/panic handling with stack unwinding
+- [ ] Built-in function dispatch (bridge to Go runtime)
+- [ ] Standard library integration via VM opcodes
+
+**Package:** `pkg/vm`
+
+**Expected outcome:** Aura programs execute 10–50x faster than the tree-walk interpreter while maintaining identical semantics.
+
+### 6.3 Performance Optimizations
+
+**Complexity:** Medium-High | **Estimate:** 1–2 weeks
+
+Optimize the VM and runtime for real-world performance.
+
+- [ ] Garbage collection (mark-and-sweep or tracing GC)
+- [ ] String interning for reduced memory usage
+- [ ] Constant folding at compile time
+- [ ] Dead code elimination
+- [ ] Inline caching for method dispatch
+- [ ] Tail call optimization
+- [ ] Stack overflow detection and recovery
+
+**Package:** `pkg/vm`, `pkg/compiler`
+
+**Expected outcome:** Aura programs handle real workloads (100K+ iterations, large data structures) with predictable memory behavior.
+
+### 6.4 Advanced Optimizations (Future)
+
+**Complexity:** Very High | **Estimate:** 2+ weeks (ongoing)
+
+*These are stretch goals for post-v2.0.0 development.*
+
+- [ ] JIT compilation (compile hot paths to native code)
+- [ ] Profile-guided optimization
+- [ ] WASM compilation target (run Aura in browsers)
+- [ ] Native compilation via LLVM or Go codegen
+- [ ] Concurrent GC (for async workloads)
+- [ ] Transpilation to Go (generate Go source from Aura AST)
+
+**Package:** `pkg/jit`, `pkg/codegen`
+
+**Expected outcome:** Aura achieves performance parity with compiled languages for CPU-bound workloads.
+
+### Phase 6 Milestone Criteria
+
+Phase 6 is complete when:
+- ✅ All existing tests pass under both interpreter and VM execution
+- ✅ Bytecode compiler produces correct output for all language features
+- ✅ VM executes at least 10x faster than tree-walk interpreter on benchmarks
+- ✅ GC handles long-running programs without memory leaks
+- ✅ Debug information allows source-level error reporting from bytecode
 
 ---
 
