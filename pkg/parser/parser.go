@@ -1085,15 +1085,47 @@ func (p *Parser) parseStatement() ast.Statement {
         }
 }
 
-func (p *Parser) parseLetStmt() *ast.LetStmt {
+func (p *Parser) parseLetStmt() ast.Statement {
         start := p.current().Pos
         p.expect(token.LET)
 
-        ls := &ast.LetStmt{}
+        mutable := false
         if p.check(token.MUT) {
-                ls.Mutable = true
+                mutable = true
                 p.advance()
         }
+
+        // Check for tuple destructuring: let (x, y) = expr
+        if p.check(token.LPAREN) {
+                p.advance()
+                var names []string
+                for !p.check(token.RPAREN) && !p.check(token.EOF) {
+                        tok := p.current()
+                        if tok.Type == token.IDENT || tok.Type.IsKeyword() {
+                                names = append(names, tok.Literal)
+                                p.advance()
+                        } else {
+                                p.addError("expected variable name in tuple destructuring")
+                                p.advance()
+                        }
+                        if p.check(token.COMMA) {
+                                p.advance()
+                        }
+                }
+                p.expect(token.RPAREN)
+                p.expect(token.ASSIGN)
+                value := p.parseExpr()
+                p.expectNewline()
+                return &ast.LetTupleDestructure{
+                        Span:    p.makeSpan(start),
+                        Names:   names,
+                        Mutable: mutable,
+                        Value:   value,
+                }
+        }
+
+        ls := &ast.LetStmt{}
+        ls.Mutable = mutable
 
         tok := p.current()
         if tok.Type == token.IDENT || tok.Type.IsKeyword() {
@@ -1753,7 +1785,28 @@ func (p *Parser) parsePrimary() ast.Expr {
 
         case token.LPAREN:
                 p.advance()
+                // Empty tuple: ()
+                if p.check(token.RPAREN) {
+                        p.advance()
+                        return &ast.TupleLiteral{Span: p.makeSpan(start), Elements: nil}
+                }
                 expr := p.parseExpr()
+                // If followed by comma, it's a tuple
+                if p.check(token.COMMA) {
+                        elements := []ast.Expr{expr}
+                        p.advance() // consume first comma
+                        // Parse remaining elements (if any)
+                        for !p.check(token.RPAREN) && !p.check(token.EOF) {
+                                elements = append(elements, p.parseExpr())
+                                if !p.check(token.COMMA) {
+                                        break
+                                }
+                                p.advance() // consume comma
+                        }
+                        p.expect(token.RPAREN)
+                        return &ast.TupleLiteral{Span: p.makeSpan(start), Elements: elements}
+                }
+                // Otherwise it's a grouped expression
                 p.expect(token.RPAREN)
                 return expr
 

@@ -6,6 +6,38 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [v0.8.1] — 2026-03-23
+
+### Phase 3.1.1: Tuple Literal Syntax & Destructuring
+
+Quick-win release adding first-class tuple support to the Aura language.
+
+### Added
+- **Tuple literal syntax**: `(a, b, c)` creates tuples directly in expressions
+- **Single-element tuples**: `(42,)` with trailing comma disambiguation
+- **Empty tuples**: `()` creates an empty tuple
+- **Nested tuples**: `((1, 2), (3, 4))` fully supported
+- **Tuple destructuring**: `let (x, y) = point` in let bindings
+- **Mutable destructuring**: `let mut (a, b) = (1, 2)` for mutable bindings
+- **Wildcard in destructuring**: `let (x, _, z) = tuple` to skip elements
+- **List destructuring**: `let (a, b) = [5, 10]` also works with lists
+- **Tuple iteration**: `for x in tuple:` support in for loops
+- **12 tuple methods**: `len`, `length`, `get`, `to_list`, `is_empty`, `contains`, `first`, `last`, `reverse`, `map`, `for_each`, `enumerate`, `zip`
+- **34 new tests** for tuple functionality (905 total tests)
+
+### AST Changes
+- Added `TupleLiteral` expression node
+- Added `LetTupleDestructure` statement node
+
+### Files Changed
+- `pkg/ast/ast.go` — New AST nodes
+- `pkg/parser/parser.go` — Tuple parsing and let destructuring
+- `pkg/interpreter/eval.go` — Tuple evaluation, destructuring, iteration
+- `pkg/interpreter/methods_tuple.go` — New file with 12 tuple methods
+- `pkg/interpreter/tuple_test.go` — New file with 34 tests
+
+---
+
 ## [v0.8.0] — 2026-03-22
 
 ### Phase 4 Complete: Runtime & Standard Library — COMPLETE

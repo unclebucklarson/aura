@@ -1,10 +1,10 @@
 # Aura Method Reference
 
-> **Version:** 0.8.0 (Phase 4 — Runtime & Standard Library COMPLETE)
-> **Total Methods:** 108+ built-in methods + 117 stdlib functions  
-> **Types Covered:** String (22) · List (27) · Map (24) · Option (17) · Result (18)  
+> **Version:** 0.8.1 (Phase 3.1.1 — Tuple Literal Syntax COMPLETE)
+> **Total Methods:** 120+ built-in methods + 117 stdlib functions  
+> **Types Covered:** String (22) · List (27) · Map (24) · Tuple (12) · Option (17) · Result (18)  
 > **Stdlib Modules:** math · string · io · testing · json · regex · collections · random · format · result · option · iter · file · time · env · net · log  
-> **Tests:** 875 total across all packages
+> **Tests:** 905 total across all packages
 
 ---
 
@@ -35,6 +35,14 @@
   - [Mutation](#map--mutation)
   - [Higher-Order Functions](#map--higher-order-functions)
   - [Utility](#map--utility)
+- [Tuple Methods](#tuple-methods)
+  - [Creation](#tuple--creation)
+  - [Size & Emptiness](#tuple--size--emptiness)
+  - [Access](#tuple--access)
+  - [Search](#tuple--search)
+  - [Transformation](#tuple--transformation)
+  - [Iteration](#tuple--iteration)
+  - [Destructuring](#tuple--destructuring)
 - [Option Methods](#option-methods)
   - [Predicates](#option--predicates)
   - [Extraction](#option--extraction)
@@ -756,6 +764,137 @@ Returns `Some([key, value])` for the first matching entry, or `None`.
 
 {"a": 1}.find(|k, v| v > 10)
 // => None
+```
+
+---
+
+## Tuple Methods
+
+Tuples are immutable, ordered collections of values. They support mixed types and are ideal for returning multiple values from functions.
+
+### Tuple — Creation
+
+```aura
+# Empty tuple
+let empty = ()
+
+# Single-element tuple (trailing comma required)
+let single = (42,)
+
+# Multi-element tuple
+let point = (10, 20)
+let record = ("Alice", 30, true)
+
+# Nested tuples
+let nested = ((1, 2), (3, 4))
+```
+
+### Tuple — Size & Emptiness
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `len()` | `Int` | Number of elements |
+| `length()` | `Int` | Alias for `len()` |
+| `is_empty()` | `Bool` | True if tuple has no elements |
+
+```aura
+let t = (1, 2, 3)
+t.len()       # 3
+t.is_empty()  # false
+().is_empty()  # true
+```
+
+### Tuple — Access
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `t[i]` | `Value` | Direct index access (panics on out of bounds) |
+| `get(index)` | `Option[Value]` | Safe index access |
+| `first()` | `Option[Value]` | First element |
+| `last()` | `Option[Value]` | Last element |
+
+```aura
+let t = (10, 20, 30)
+t[0]           # 10
+t.get(1)       # Some(20)
+t.get(99)      # None
+t.first()      # Some(10)
+t.last()       # Some(30)
+```
+
+### Tuple — Search
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `contains(value)` | `Bool` | True if tuple contains the value |
+
+```aura
+let t = (1, 2, 3)
+t.contains(2)   # true
+t.contains(99)  # false
+```
+
+### Tuple — Transformation
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `to_list()` | `List` | Convert tuple to list |
+| `reverse()` | `Tuple` | New tuple with reversed elements |
+| `map(fn)` | `Tuple` | Apply function to each element |
+| `zip(other)` | `List[Tuple]` | Pair elements with another tuple/list |
+| `enumerate()` | `List[Tuple]` | List of (index, value) pairs |
+
+```aura
+let t = (1, 2, 3)
+t.to_list()           # [1, 2, 3]
+t.reverse()           # (3, 2, 1)
+t.map(|x| -> x * 2)  # (2, 4, 6)
+t.zip((10, 20, 30))   # [(1, 10), (2, 20), (3, 30)]
+t.enumerate()          # [(0, 1), (1, 2), (2, 3)]
+```
+
+### Tuple — Iteration
+
+Tuples are iterable and can be used in for loops:
+
+```aura
+let t = (1, 2, 3)
+for x in t:
+    print(x)
+
+# With for_each method
+t.for_each(|x| -> print(x))
+```
+
+### Tuple — Destructuring
+
+Tuples support destructuring in `let` bindings:
+
+```aura
+# Basic destructuring
+let (x, y) = (10, 20)
+# x = 10, y = 20
+
+# Three elements
+let (name, age, active) = ("Alice", 30, true)
+
+# With wildcard (ignore elements)
+let (first, _, last) = (1, 2, 3)
+# first = 1, last = 3
+
+# Mutable destructuring
+let mut (a, b) = (1, 2)
+a = 100
+
+# Destructuring from lists
+let (x, y) = [5, 10]
+
+# Function return value destructuring
+fn divide(a: Int, b: Int):
+    return (a / b, a % b)
+
+let (quotient, remainder) = divide(17, 5)
+# quotient = 3, remainder = 2
 ```
 
 ---

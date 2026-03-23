@@ -110,6 +110,9 @@ func EvalExpr(expr ast.Expr, env *Environment) Value {
         case *ast.Lambda:
                 return evalLambda(e, env)
 
+        case *ast.TupleLiteral:
+                return evalTupleLiteral(e, env)
+
         case *ast.OptionPropagate:
                 return evalOptionPropagate(e, env)
 
@@ -692,6 +695,53 @@ func evalListExpr(e *ast.ListExpr, env *Environment) Value {
         return &ListVal{Elements: elems}
 }
 
+func evalTupleLiteral(e *ast.TupleLiteral, env *Environment) Value {
+        elems := make([]Value, len(e.Elements))
+        for i, elem := range e.Elements {
+                elems[i] = EvalExpr(elem, env)
+        }
+        return &TupleVal{Elements: elems}
+}
+
+func execLetTupleDestructure(s *ast.LetTupleDestructure, env *Environment) Value {
+        val := EvalExpr(s.Value, env)
+        tuple, ok := val.(*TupleVal)
+        if !ok {
+                // Also support destructuring lists
+                if list, ok2 := val.(*ListVal); ok2 {
+                        if len(list.Elements) != len(s.Names) {
+                                runtimePanic(s.Span, "cannot destructure list of length %d into %d variables", len(list.Elements), len(s.Names))
+                        }
+                        for i, name := range s.Names {
+                                if name == "_" {
+                                        continue
+                                }
+                                if s.Mutable {
+                                        env.Define(name, list.Elements[i])
+                                } else {
+                                        env.DefineConst(name, list.Elements[i])
+                                }
+                        }
+                        return &NoneVal{}
+                }
+                runtimePanic(s.Span, "cannot destructure %s, expected tuple or list", valueTypeNames[val.Type()])
+        }
+        if len(tuple.Elements) != len(s.Names) {
+                runtimePanic(s.Span, "cannot destructure tuple of length %d into %d variables", len(tuple.Elements), len(s.Names))
+        }
+        for i, name := range s.Names {
+                if name == "_" {
+                        continue
+                }
+                if s.Mutable {
+                        env.Define(name, tuple.Elements[i])
+                } else {
+                        env.DefineConst(name, tuple.Elements[i])
+                }
+        }
+        return &NoneVal{}
+}
+
 func evalMapExpr(e *ast.MapExpr, env *Environment) Value {
         keys := make([]Value, 0, len(e.Entries))
         values := make([]Value, 0, len(e.Entries))
@@ -769,6 +819,8 @@ func ExecStmt(stmt ast.Statement, env *Environment) Value {
         switch s := stmt.(type) {
         case *ast.LetStmt:
                 return execLetStmt(s, env)
+        case *ast.LetTupleDestructure:
+                return execLetTupleDestructure(s, env)
         case *ast.AssignStmt:
                 return execAssignStmt(s, env)
         case *ast.ReturnStmt:
@@ -1073,6 +1125,8 @@ func execForStmt(s *ast.ForStmt, env *Environment) Value {
         case *MapVal:
                 items = v.Keys
         case *SetVal:
+                items = v.Elements
+        case *TupleVal:
                 items = v.Elements
         default:
                 runtimePanic(s.Span, "cannot iterate over %s", valueTypeNames[iterable.Type()])

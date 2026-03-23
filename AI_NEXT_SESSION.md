@@ -1,10 +1,10 @@
 # AI Next Session - Aura Language
 
-## Status: Phase 4 COMPLETE ✅ (All Subphases)
+## Status: Phase 3.1.1 COMPLETE ✅ — Tuple Literal Syntax
 
-**Version:** v0.8.0
-**Total Tests:** 875 (all passing)
-**Date:** 2026-03-22
+**Version:** v0.8.1
+**Total Tests:** 905 (all passing)
+**Date:** 2026-03-23
 
 ---
 
@@ -34,13 +34,13 @@
 
 | Metric | Value |
 |--------|-------|
-| Built-in methods | 108+ across 5 types |
+| Built-in methods | 120+ across 6 types (incl. Tuple) |
 | Standard library modules | 17 |
 | Standard library functions | 117 |
 | Effect providers | 5 (File, Time, Env, Net, Log) |
-| Total tests | 875 |
-| Interpreter tests | 738 |
-| Phases complete | 1, 2, 3, 4 |
+| Total tests | 905 |
+| Interpreter tests | 772 |
+| Phases complete | 1, 2, 3, 3.1.1, 4 |
 
 ---
 
@@ -80,86 +80,51 @@ Standard Library Modules (17 total):
 | pkg/parser | 16 | All language constructs |
 | pkg/symbols | 9 | Symbol table, scopes |
 | pkg/types | 26 | Type system, subtyping |
-| pkg/interpreter | 738 | Full runtime + stdlib + effects |
-| **Total** | **875** | **All passing** |
+| pkg/interpreter | 772 | Full runtime + stdlib + effects + tuples |
+| **Total** | **905** | **All passing** |
 
 ---
 
-## 🚀 IMMEDIATE PRIORITY — Phase 3.1.1: Tuple Literal Syntax
+## ✅ COMPLETED — Phase 3.1.1: Tuple Literal Syntax (v0.8.1)
 
-> **⚡ START HERE. This is the #1 task for the next session.**
->
-> Phase 3.1 (Tree-Walk Interpreter) is marked complete, but tuple literals were never
-> implemented. This is a quick win that completes Phase 3.1 fully before moving on to
-> Phase 3.2 (Pattern Matching). Tuples are a foundational data type that pattern matching
-> will heavily rely on — implementing them first avoids rework later.
+> Completed 2026-03-23. All acceptance criteria met.
 
-### Scope
+### What Was Delivered
 
-| Item | Details |
-|------|---------|
-| **Target Version** | **v0.8.1** |
-| **Estimated Effort** | **1–2 days** |
-| **Priority** | 🔴 **Immediate — do this before anything else** |
-| **Depends On** | Nothing (all prerequisites are met) |
-| **Blocks** | Phase 3.2 (Pattern Matching uses tuple destructuring) |
+- [x] `let t = (1, 2, 3)` creates a tuple
+- [x] `let (x, y) = (1, 2)` destructures correctly
+- [x] `t.len()` returns 3
+- [x] `t.get(0)` returns `Some(1)`
+- [x] `t.to_list()` returns `[1, 2, 3]`
+- [x] `(1, 2) == (1, 2)` is `true`
+- [x] `(1,)` is a single-element tuple, not a grouped expression
+- [x] `()` empty tuple support
+- [x] All existing 870 tests still pass
+- [x] 34 new tuple tests added and passing (905 total)
+- [x] 12 tuple methods: len, length, get, to_list, is_empty, contains, first, last, reverse, map, for_each, enumerate, zip
+- [x] Tuple destructuring with wildcards: `let (x, _, z) = t`
+- [x] List destructuring support: `let (a, b) = [5, 10]`
+- [x] Tuple iteration: `for x in tuple:`
 
-### Deliverables
-
-1. **Tuple Literal Parsing** — `(a, b, c)` syntax
-   - New `TupleExpr` AST node in the parser
-   - Lexer support for distinguishing tuples from grouped expressions (parenthesized exprs)
-   - Handle single-element tuples with trailing comma: `(a,)` vs grouping `(a)`
-
-2. **Tuple Destructuring** — `let (x, y) = point`
-   - Destructuring in `let` bindings
-   - Destructuring in function parameters (stretch goal)
-   - Nested destructuring: `let (a, (b, c)) = nested`
-
-3. **TupleVal Runtime Type** — New value type in interpreter
-   - Immutable fixed-size collection
-   - Indexable: `tuple.0`, `tuple.1` (or `get(index)`)
-   - Equality comparison between tuples
-   - String representation: `(1, "hello", true)`
-
-4. **Basic Tuple Methods** — Register with method dispatch
-   - `len()` — number of elements
-   - `get(index)` — element at index (returns Option)
-   - `to_list()` — convert to list
-   - `contains(value)` — check membership
-   - `first()` / `last()` — returns Option
-
-5. **Test Coverage** — 10–15 tests minimum
-   - Tuple creation and access
-   - Tuple destructuring (simple and nested)
-   - Tuple methods
-   - Tuple equality
-   - Edge cases: empty tuple `()`, single-element tuple `(a,)`
-   - Type errors and invalid operations
-
-### Acceptance Criteria
-
-- [ ] `let t = (1, 2, 3)` creates a tuple
-- [ ] `let (x, y) = (1, 2)` destructures correctly
-- [ ] `t.len()` returns 3
-- [ ] `t.get(0)` returns `Some(1)`
-- [ ] `t.to_list()` returns `[1, 2, 3]`
-- [ ] `(1, 2) == (1, 2)` is `true`
-- [ ] `(1,)` is a single-element tuple, not a grouped expression
-- [ ] All existing 875 tests still pass
-- [ ] 10–15 new tuple tests added and passing
-
-### Files to Modify/Create
+### Files Changed
 
 | File | Action |
 |------|--------|
-| `pkg/token/token.go` | May need tuple-specific tokens (if any) |
-| `pkg/lexer/lexer.go` | Tuple vs grouping disambiguation |
-| `pkg/parser/parser.go` | `TupleExpr` AST node, destructuring patterns |
-| `pkg/interpreter/value.go` | New `TupleVal` type |
-| `pkg/interpreter/eval.go` | Evaluate `TupleExpr`, tuple destructuring |
-| `pkg/interpreter/methods_tuple.go` | **NEW** — Tuple method registration |
-| `pkg/interpreter/tuple_test.go` | **NEW** — Tuple test suite |
+| `pkg/ast/ast.go` | Added `TupleLiteral` and `LetTupleDestructure` nodes |
+| `pkg/parser/parser.go` | Tuple parsing, destructuring in let statements |
+| `pkg/interpreter/eval.go` | Tuple evaluation, destructuring, for-loop iteration |
+| `pkg/interpreter/methods_tuple.go` | **NEW** — 12 tuple methods |
+| `pkg/interpreter/tuple_test.go` | **NEW** — 34 tests |
+
+---
+
+## 🚀 NEXT PRIORITY — Phase 3.2: Pattern Matching
+
+> **⚡ START HERE for the next session.**
+>
+> With tuples complete, pattern matching can now leverage tuple destructuring.
+> Phase 3.2 enhances the existing `match` statement with exhaustiveness checking,
+> nested patterns, guard clauses, and full destructuring support.
 
 ---
 
@@ -192,7 +157,7 @@ Literals      Matching     Type System  Ecosystem   Optimization
 
 | Phase | Focus | Effort | Version | Key Deliverables |
 |-------|-------|--------|---------|------------------|
-| **3.1.1** | **Tuple Literals** | **1–2 days** | **v0.8.1** | **Tuple parsing, destructuring, methods, 10–15 tests** |
+| **3.1.1** | **Tuple Literals** ✅ | **DONE** | **v0.8.1** | **Tuple parsing, destructuring, 12 methods, 34 tests** |
 | **3.2** | Pattern Matching | 2–3 weeks | **v0.9.0** | Exhaustive patterns, guards, nested destructuring, `when` clauses |
 | **3.3** | Advanced Type Features | 3–4 weeks | **v1.0.0** | Generics, improved inference, interface types, type constraints |
 | **5** | Tooling & Ecosystem | 4–6 weeks | **v1.1.0** | LSP server, package manager, AI integration, doc generator |

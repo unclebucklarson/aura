@@ -858,6 +858,28 @@ func (n *Lambda) nodeType() string    { return "Lambda" }
 func (n *Lambda) GetSpan() token.Span { return n.Span }
 func (n *Lambda) isExpr()             {}
 
+// TupleLiteral represents "(a, b, c)" or "(a,)" for single-element tuples.
+type TupleLiteral struct {
+        Span     token.Span
+        Elements []Expr
+}
+
+func (n *TupleLiteral) nodeType() string    { return "TupleLiteral" }
+func (n *TupleLiteral) GetSpan() token.Span { return n.Span }
+func (n *TupleLiteral) isExpr()             {}
+
+// LetTupleDestructure represents "let (x, y, z) = expr".
+type LetTupleDestructure struct {
+        Span    token.Span
+        Names   []string
+        Mutable bool
+        Value   Expr
+}
+
+func (n *LetTupleDestructure) nodeType() string    { return "LetTupleDestructure" }
+func (n *LetTupleDestructure) GetSpan() token.Span { return n.Span }
+func (n *LetTupleDestructure) isStatement()        {}
+
 // --- Patterns ---
 
 // Pattern is the interface for match patterns.
