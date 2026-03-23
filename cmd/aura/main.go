@@ -14,6 +14,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/unclebucklarson/aura/pkg/ast"
@@ -21,6 +22,7 @@ import (
 	"github.com/unclebucklarson/aura/pkg/formatter"
 	"github.com/unclebucklarson/aura/pkg/interpreter"
 	"github.com/unclebucklarson/aura/pkg/lexer"
+	"github.com/unclebucklarson/aura/pkg/module"
 	"github.com/unclebucklarson/aura/pkg/parser"
 )
 
@@ -233,12 +235,24 @@ func runCheck(src, file string, jsonOutput bool) int {
 }
 
 func runRun(src, file string) int {
-	module, code := parseSource(src, file)
+	mod, code := parseSource(src, file)
 	if code != 0 {
 		return code
 	}
 
-	interp := interpreter.New(module)
+	// Resolve the absolute path of the source file for the module resolver
+	absPath, pathErr := filepath.Abs(file)
+	if pathErr != nil {
+		fmt.Fprintf(os.Stderr, "error resolving path: %v\n", pathErr)
+		return 1
+	}
+	baseDir := filepath.Dir(absPath)
+
+	// Create module resolver and effect context for full stdlib/import support
+	resolver := module.NewResolver(baseDir)
+	effects := interpreter.NewEffectContext()
+
+	interp := interpreter.NewWithResolverAndEffects(mod, absPath, resolver, effects)
 	_, err := interp.Run()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
@@ -280,9 +294,12 @@ func runRepl() int {
 	fmt.Println("Type expressions or statements. Press Ctrl+D to exit.")
 	fmt.Println()
 
-	// Create a persistent module environment
-	module := &ast.Module{Name: &ast.QualifiedName{Parts: []string{"repl"}}}
-	interp := interpreter.New(module)
+	// Create a persistent module environment with resolver and effects
+	mod := &ast.Module{Name: &ast.QualifiedName{Parts: []string{"repl"}}}
+	cwd, _ := os.Getwd()
+	resolver := module.NewResolver(cwd)
+	effects := interpreter.NewEffectContext()
+	interp := interpreter.NewWithResolverAndEffects(mod, "", resolver, effects)
 	if _, err := interp.Run(); err != nil {
 		fmt.Fprintf(os.Stderr, "error initializing: %v\n", err)
 		return 1

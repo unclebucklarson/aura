@@ -746,9 +746,33 @@ func (interp *Interpreter) bindImport(imp *ast.ImportNode, modVal *ModuleVal) er
                 // "import X as Y": bind module under alias
                 interp.env.DefineConst(imp.Alias, modVal)
         } else {
-                // "import X": bind module under its name
+                // "import X": bind module under its short name (e.g., "io" for "std.io")
                 modName := module.GetModuleName(importPath)
                 interp.env.DefineConst(modName, modVal)
+
+                // For std library imports, also bind under the "std" namespace
+                // so that both io.println() and std.io.println() work.
+                if strings.HasPrefix(importPath, "std.") {
+                        parts := strings.Split(importPath, ".")
+                        if len(parts) == 2 {
+                                // Create or extend the "std" namespace module
+                                var stdMod *ModuleVal
+                                if existing, ok := interp.env.Get("std"); ok {
+                                        if m, ok := existing.(*ModuleVal); ok {
+                                                stdMod = m
+                                        }
+                                }
+                                if stdMod == nil {
+                                        stdMod = &ModuleVal{
+                                                Name:    "std",
+                                                Path:    "std",
+                                                Exports: make(map[string]Value),
+                                        }
+                                        interp.env.DefineConst("std", stdMod)
+                                }
+                                stdMod.Exports[parts[1]] = modVal
+                        }
+                }
         }
 
         return nil
