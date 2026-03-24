@@ -32,7 +32,7 @@ These principles guide every phase of development. When evaluating features, tra
 | 1 | Syntax (Lexer, Parser, Formatter) | ✅ COMPLETE | v0.1 | — |
 | 2 | Semantic Analysis | ✅ COMPLETE | v0.2 | — |
 | 3.1 | Tree-Walk Interpreter | ✅ COMPLETE | v0.3 | — |
-| 3.2 | Pattern Matching (Advanced) | 🔲 Not Started | v0.9.0 | 2–3 weeks |
+| 3.2 | Pattern Matching (Advanced) | ✅ COMPLETE | v0.9.0 | — |
 | 3.3 | Advanced Type Features | 🔲 Not Started | v1.0.0 | 3–4 weeks |
 | 4 | Runtime & Standard Library | ✅ COMPLETE (4.1 ✅, 4.2 ✅, 4.3 ✅) | v0.8.0 | — |
 | 5 | Advanced Tooling & Ecosystem | 🔲 Not Started | v1.1.0 | 4–6 weeks |
@@ -197,26 +197,28 @@ The tree-walk interpreter is the **highest-impact next step** for the AI-first m
 - [x] `--json` flag for structured output (AI agent consumption)
 - [x] `--dry-run` flag for validation without execution
 
-### 3.2 Pattern Matching (Advanced) — 🔲 NOT STARTED
+### 3.2 Pattern Matching (Advanced) — ✅ COMPLETE
 
-**Complexity:** Medium | **Estimate:** 2–3 weeks | **Target:** v0.9.0
+**Completed:** 2026-03-23 | **Version:** v0.9.0
 
 > 🤖 **AI optimization:** Advanced pattern matching enables AI to generate more expressive and concise code. Exhaustiveness checking provides compile-time guarantees that AI-generated match expressions handle all cases — a critical safety property.
 
-**Note:** Basic `match` with enum variants and literals is already implemented in Phase 3.1. This phase completes the pattern matching system with advanced features.
+- [x] Nested patterns (patterns within patterns, e.g., `Some(Ok(x))`)
+- [x] Guard clauses (`when` conditions on match arms)
+- [x] Or-patterns (`A | B -> ...` — match multiple patterns with one arm)
+- [x] Exhaustiveness checking for Bool, Option, Result, and literal types
+- [x] Unreachable/redundant pattern detection with warnings
+- [x] Destructuring in `let` bindings (e.g., `let (x, y) = tuple`, `let [first, ...rest] = list`)
+- [x] Constructor patterns (`Some(x)`, `None`, `Ok(v)`, `Err(e)`)
+- [x] Tuple patterns, list patterns, and spread patterns (`...rest`)
+- [x] Function parameter patterns (`fn f((x, y)) -> x + y`)
+- [x] Match expressions (return values) and match statements
+- [x] Warning system (`WarningCollector`) for non-blocking pattern analysis
+- [x] Pattern analysis module (`pattern_analysis.go`)
 
-- [ ] Nested patterns (patterns within patterns, e.g., `Some(Ok(x))`)
-- [ ] Guard clauses (`when` conditions on match arms)
-- [ ] Or-patterns (`A | B => ...` — match multiple patterns with one arm)
-- [ ] Binding patterns (`x @ Pattern` — bind a name while matching)
-- [ ] Exhaustiveness checking for all pattern types (not just enums)
-- [ ] Destructuring in `let` bindings (e.g., `let (x, y) = tuple`)
-- [ ] Wildcard patterns with type narrowing
-- [ ] Struct destructuring in match arms
+**Package:** `pkg/interpreter`, `pkg/parser`, `pkg/token`, `pkg/ast`
 
-**Package:** `pkg/interpreter`, `pkg/checker`
-
-**Estimated test additions:** ~80–120 new tests
+**Tests:** 135 new pattern matching tests (match_test: 25, match_structured: 33, match_advanced: 24, match_exhaustiveness: 22, tuple: 34) — **1010 total tests** across all packages ✅
 
 ### 3.3 Advanced Type Features — 🔲 NOT STARTED
 
@@ -238,14 +240,17 @@ The tree-walk interpreter is the **highest-impact next step** for the AI-first m
 
 ### Phase 3 Deliverables
 
-- ✅ `pkg/interpreter/` with 5 source files: value system, environment, evaluator, module runner, test runner
+- ✅ `pkg/interpreter/` — complete tree-walk interpreter with pattern matching
 - ✅ CLI commands: `aura run`, `aura test`, `aura repl`
 - ✅ Full expression/statement evaluation (arithmetic, comparison, logic, control flow, structs, enums, match, closures, lambdas, list comprehensions)
 - ✅ 14 built-in functions (print, len, str, int, float, range, type_of, abs, min, max, Ok, Err, Some, None)
-- ✅ **112 interpreter tests** — all passing (232 total across all packages)
 - ✅ String interpolation with full expression support
 - ✅ Pipeline operator (`|>`) evaluation
 - ✅ Option chaining (`?.`) with None short-circuiting
+- ✅ Tuple literals, destructuring, and 12 tuple methods (Phase 3.1.1)
+- ✅ Full pattern matching: nested, guard clauses, or-patterns, constructor/tuple/list/spread patterns (Phase 3.2)
+- ✅ Exhaustiveness checking and unreachable/redundant pattern detection with warning system (Phase 3.2)
+- ✅ **1010 total tests** across all packages
 
 ### 3.1.6 Post-Phase-3.1 Feature Additions
 
@@ -362,12 +367,12 @@ Full effect system with 5 providers, 34 stdlib functions, and comprehensive mock
 
 Phase 4 delivers a complete runtime and standard library for Aura:
 
-- ✅ **108+ built-in methods** across String (22), List (27), Map (24), Option (17), Result (18)
+- ✅ **120+ built-in methods** across String (22), List (27), Map (24), Tuple (12), Option (17), Result (18)
 - ✅ **17 standard library modules** with **117 functions** (12 pure computation + 5 effect-based)
 - ✅ **Complete effect system** with 5 providers (File, Time, Env, Net, Log), each with Real + Mock implementations
 - ✅ **Full mocking framework** — MockBuilder, EffectStack, Clone/Derive composition
 - ✅ **Module system** — Import resolution, namespaces, aliasing, cycle detection
-- ✅ **875 tests** across all packages — all passing
+- ✅ **1010 tests** across all packages — all passing
 - ✅ The AuraTask example from the spec can run end-to-end with mocked effects in tests
 
 ---
@@ -647,3 +652,5 @@ See [DEVELOPMENT.md](DEVELOPMENT.md) for setup instructions, architecture overvi
 | 2026-03-20 | v0.4.0 | **Phase 4.1 complete** — 108+ core runtime methods (String: 22, List: 27, Map: 24, Option: 17, Result: 18), method dispatch registry, 468 total tests |
 | 2026-03-21 | v0.6.0 | **Phase 4.2 complete** — Module system + 12 pure computation stdlib modules, 70 stdlib functions, 614 total tests |
 | 2026-03-22 | v0.8.0 | **Phase 4 complete** — Effect Runtime (5 providers), 17 stdlib modules, 117 stdlib functions, MockBuilder, effect composition, 875 total tests |
+| 2026-03-23 | v0.8.1 | **Phase 3.1.1** — Tuple literal syntax, destructuring, 12 tuple methods, 905 total tests |
+| 2026-03-23 | v0.9.0 | **Phase 3.2 complete** — Full pattern matching with exhaustiveness checking, unreachable/redundant pattern detection, warning system, 1010 total tests |

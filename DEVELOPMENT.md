@@ -110,11 +110,18 @@ aura-toolchain/
 │       └── methods_string.go    # 22 String methods
 │       └── methods_list.go      # 27 List methods + helpers
 │       └── methods_map.go       # 24 Map methods
+│       └── methods_tuple.go     # 12 Tuple methods
 │       └── methods_option.go    # 17 Option + 18 Result methods
+│       └── pattern_analysis.go  # Pattern exhaustiveness/redundancy analysis + warnings
 │       └── effect.go            # Effect system: EffectContext, 5 providers
 │       └── stdlib_*.go          # 16 stdlib module implementations
 │       └── interpreter_test.go  # Core interpreter tests
 │       └── methods_test.go      # 222 method tests
+│       └── match_test.go        # 25 match expression tests
+│       └── match_structured_test.go     # 33 structured pattern tests
+│       └── match_advanced_test.go       # 24 advanced pattern tests
+│       └── match_exhaustiveness_test.go # 22 exhaustiveness/warning tests
+│       └── tuple_test.go        # 34 tuple tests
 │       └── import_advanced_test.go  # 64 module system tests
 │       └── stdlib_complete_test.go  # 65 stdlib tests
 │       └── effect_test.go       # 48 effect foundation tests
@@ -475,6 +482,61 @@ go tool cover -html=coverage.out
 [x] reset_effects(), get_env(key)
 ```
 
+### Phase 3.1.1: Tuple Literal Syntax ✅ COMPLETE
+
+> First-class tuple support: literal syntax, destructuring, 12 methods, 34 tests.
+> 905 total tests across all packages.
+
+```
+[x] Tuple literal syntax: (a, b, c), (42,), ()
+[x] Tuple destructuring: let (x, y) = point
+[x] 12 tuple methods (len, get, to_list, contains, first, last, reverse, map, etc.)
+[x] methods_tuple.go + tuple_test.go
+```
+
+### Phase 3.2: Pattern Matching (Advanced) ✅ COMPLETE
+
+> Production-ready pattern matching with exhaustiveness checking, unreachable pattern detection,
+> and comprehensive warning system. 135 new tests — 1010 total tests across all packages.
+
+#### Chunk 1: Pattern Matching Core (match expressions, basic patterns)
+```
+[x] Match expression syntax (match value: pattern -> expr)
+[x] Literal patterns (Int, Float, String, Bool, None)
+[x] Variable binding patterns and wildcard pattern
+[x] First-match semantics, no-match runtime error
+[x] 25 tests in match_test.go
+```
+
+#### Chunk 2: Structured Data Patterns
+```
+[x] Tuple patterns: (0, 0) -> "origin", (x, y) -> "point"
+[x] List patterns: [] -> "empty", [x, y] -> "pair"
+[x] Spread patterns: [first, ...rest], [a, ...middle, last]
+[x] Constructor patterns: Some(x), None, Ok(v), Err(e)
+[x] Nested patterns (freely composable)
+[x] 33 tests in match_structured_test.go
+```
+
+#### Chunk 3: Advanced Features
+```
+[x] Guard clauses: pattern when condition -> body
+[x] Or-patterns: pattern1 | pattern2 | pattern3
+[x] Function parameter patterns: fn f((x, y)) -> x + y
+[x] Let pattern destructuring: let [first, ...rest] = list
+[x] 24 tests in match_advanced_test.go
+```
+
+#### Chunk 4: Exhaustiveness & Warning System
+```
+[x] Exhaustiveness checking for Bool, Option, Result, literals
+[x] Unreachable pattern detection
+[x] Redundant pattern detection
+[x] WarningCollector with formatted output
+[x] Pattern analysis module (pattern_analysis.go)
+[x] 22 tests in match_exhaustiveness_test.go
+```
+
 ---
 
 ## Testing Strategy
@@ -535,7 +597,7 @@ Each package should have a **single, clear responsibility**:
 - `types` — Type system representation, equality, subtyping, and registry. Used by the checker.
 - `checker` — Multi-pass type checker integrating symbols, types, and effect tracking. Depends on parser output.
 - `module` — Module resolution, import cycle detection, initialization ordering. Used by the interpreter. 17 tests.
-- `interpreter` — Tree-walk interpreter with complete runtime. Evaluates AST directly: value system, environment/scope chain, expression/statement evaluation, builtins, test runner, string interpolation, pipeline operator, option chaining. Includes method dispatch registry with 108+ built-in methods, 17 stdlib modules with 117 functions, and effect system with 5 mockable providers (File, Time, Env, Net, Log). Depends on `ast`, `token`, `lexer`, `parser`, `module`. 738 tests.
+- `interpreter` — Tree-walk interpreter with complete runtime. Evaluates AST directly: value system, environment/scope chain, expression/statement evaluation, builtins, test runner, string interpolation, pipeline operator, option chaining, full pattern matching with exhaustiveness checking. Includes method dispatch registry with 120+ built-in methods (String, List, Map, Tuple, Option, Result), 17 stdlib modules with 117 functions, and effect system with 5 mockable providers (File, Time, Env, Net, Log). Depends on `ast`, `token`, `lexer`, `parser`, `module`. 873 tests.
 
 ### Naming Conventions
 

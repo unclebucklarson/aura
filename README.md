@@ -30,7 +30,7 @@
 
 A complete toolchain for the **Aura programming language** — a Python-inspired, statically typed language with specification-driven development, algebraic types, and effect tracking.
 
-Built in Go. Implements lexing, parsing, AST construction, canonical source formatting, type checking with semantic analysis, tree-walk interpreter, 108+ core runtime methods across String, List, Map, Option, and Result types, 17 standard library modules with 117 functions, and a complete effect system with 5 mockable providers.
+Built in Go. Implements lexing, parsing, AST construction, canonical source formatting, type checking with semantic analysis, tree-walk interpreter with full pattern matching and exhaustiveness checking, 120+ core runtime methods across String, List, Map, Tuple, Option, and Result types, 17 standard library modules with 117 functions, and a complete effect system with 5 mockable providers.
 
 ## Project Structure
 
@@ -60,7 +60,9 @@ aura-toolchain/
 │       ├── methods_string.go     # 22 String methods
 │       ├── methods_list.go       # 27 List methods + callValue/cmpValues helpers
 │       ├── methods_map.go        # 24 Map methods
+│       ├── methods_tuple.go      # 12 Tuple methods
 │       ├── methods_option.go     # 17 Option + 18 Result methods
+│       ├── pattern_analysis.go   # Pattern exhaustiveness/redundancy analysis + warnings
 │       ├── effect.go             # Effect system: EffectContext, 5 providers (Real + Mock)
 │       ├── stdlib_math.go        # std.math (8 functions)
 │       ├── stdlib_string.go      # std.string (4 functions)
@@ -173,10 +175,21 @@ go build -o aura ./cmd/aura
 
 ### Control Flow
 - `if` / `elif` / `else`
-- `match` with patterns (literals, wildcards, constructors, destructuring)
+- `match` statements and expressions with comprehensive pattern matching
+- Pattern types: literals, wildcards, bindings, constructors (`Some(x)`, `Ok(v)`), tuples, lists, spread (`...rest`), or-patterns (`A | B`)
+- Guard clauses: `pattern when condition -> body`
+- Exhaustiveness checking with warnings for Bool, Option, Result, and literals
+- Unreachable and redundant pattern detection
+- `let` pattern destructuring: `let (x, y) = point`, `let [first, ...rest] = list`
+- Function parameter patterns: `fn f((x, y)) -> x + y`
 - `for ... in` loops
 - `while` loops
 - `return`, `break`, `continue`
+
+### Tuples
+- Tuple literals: `(a, b, c)`, single-element: `(42,)`, empty: `()`
+- Tuple destructuring: `let (x, y) = point`
+- 12 built-in tuple methods
 
 ### Expressions
 - Binary and unary operators
@@ -188,10 +201,11 @@ go build -o aura ./cmd/aura
 - String interpolation: `"Hello, {name}!"`
 - Struct construction with named fields
 
-### Built-in Methods (108+)
+### Built-in Methods (120+)
 - **String** (22): `len`, `upper`, `lower`, `contains`, `split`, `trim`, `replace`, `starts_with`, `ends_with`, `index_of`, `slice`, `chars`, `repeat`, `reverse`, and more
 - **List** (27): `map`, `filter`, `reduce`, `sort`, `reverse`, `first`, `last`, `get`, `flat_map`, `flatten`, `unique`, `zip`, `enumerate`, `any`, `all`, `sum`, `min`, `max`, and more
 - **Map** (24): `keys`, `values`, `entries`, `get`, `set`, `remove`, `merge`, `filter`, `map`, `find`, `has`, `contains_key`, `contains_value`, and more
+- **Tuple** (12): `len`, `get`, `to_list`, `is_empty`, `contains`, `first`, `last`, `reverse`, `map`, `for_each`, `enumerate`, `zip`
 - **Option** (17): `unwrap`, `expect`, `map`, `flat_map`, `and_then`, `filter`, `or_else`, `zip`, `to_result`, `is_some`, `is_none`, `contains`, and more
 - **Result** (18): `unwrap`, `expect`, `map`, `map_err`, `and_then`, `or_else`, `ok`, `err`, `to_option`, `is_ok`, `is_err`, `contains`, and more
 
@@ -220,7 +234,7 @@ Run the full test suite:
 go test ./... -v
 ```
 
-**875 tests total** across all packages:
+**1010 tests total** across all packages:
 - `pkg/lexer/` — 11 tests covering tokenization, indentation, comments, edge cases
 - `pkg/parser/` — 16 tests covering all language constructs
 - `pkg/formatter/` — 9 tests including round-trip verification (parse → format → parse = same AST)
@@ -228,9 +242,10 @@ go test ./... -v
 - `pkg/types/` — 26 tests covering type system, equality, subtyping, and registry
 - `pkg/checker/` — 49 tests covering type checking, effects, specs, and error diagnostics
 - `pkg/module/` — 17 tests covering module resolution, initialization ordering, cycle detection
-- `pkg/interpreter/` — 738 tests covering:
+- `pkg/interpreter/` — 873 tests covering:
   - Core interpreter (values, environment, expressions, statements, control flow, builtins, structs, enums, match, closures, test runner, string interpolation, pipeline operator, option chaining)
-  - 222 method-specific tests for String/List/Map/Option/Result
+  - 222 method-specific tests for String/List/Map/Option/Result/Tuple
+  - 135 pattern matching tests (match expressions, structured patterns, advanced features, exhaustiveness)
   - 64 advanced import/module system tests
   - 65 stdlib tests (regex, collections, random, format, result, option, iter)
   - 222 effect system tests (file, time, env, net, log, composition, mocking)

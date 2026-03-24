@@ -77,7 +77,7 @@ sudo mv aura /usr/local/bin/
 You should see:
 
 ```
-Aura REPL v0.3 (Phase 3)
+Aura REPL v0.9.0
 Type expressions or statements. Press Ctrl+D to exit.
 ```
 
@@ -894,7 +894,7 @@ Congratulations on completing these tutorials! 🎉 You now know the fundamental
 ### 📖 Read More Documentation
 
 - **[Language Guide](../user_docs/language_guide.md)** — Deep dive into all Aura features: structs, enums, traits, specs, and more.
-- **[Method Reference](../user_docs/method_reference.md)** — Complete reference for 108+ built-in methods on String, List, Map, Option, and Result.
+- **[Method Reference](../user_docs/method_reference.md)** — Complete reference for 120+ built-in methods on String, List, Map, Tuple, Option, and Result.
 - **[Examples](../user_docs/examples.md)** — Real-world code examples showing method chaining, functional programming, and error handling.
 - **[Language Reference](../user_docs/language_reference.md)** — Formal reference for types, syntax, and the effect system.
 

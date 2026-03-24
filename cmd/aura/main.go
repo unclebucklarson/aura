@@ -290,7 +290,7 @@ func runTest(src, file string) int {
 }
 
 func runRepl() int {
-	fmt.Println("Aura REPL v0.3 (Phase 3)")
+	fmt.Println("Aura REPL v0.9.0")
 	fmt.Println("Type expressions or statements. Press Ctrl+D to exit.")
 	fmt.Println()
 

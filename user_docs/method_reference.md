@@ -1380,7 +1380,7 @@ let record = keys.zip(vals).reduce({}, |acc, pair| {
 
 ---
 
-> *This reference was generated for Aura v0.4.0. For language syntax, see the main [README](../README.md). For the development roadmap, see [ROADMAP.md](../ROADMAP.md).*
+> *This reference was generated for Aura v0.9.0. For language syntax, see the main [README](../README.md). For the development roadmap, see [ROADMAP.md](../ROADMAP.md).*
 
 
 

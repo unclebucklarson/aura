@@ -1,6 +1,6 @@
 # Aura Examples — Showcasing Built-in Methods
 
-> Real-world examples demonstrating Aura's 108+ built-in methods across all types.
+> Real-world examples demonstrating Aura's 120+ built-in methods across all types.
 > For the complete method reference, see [method_reference.md](./method_reference.md).
 
 ---
@@ -769,11 +769,11 @@ let url = host.zip(port)
 | **Map** | 24 | Ordered, safe get → Option, higher-order ops |
 | **Option** | 17 | Monadic chaining, safe defaults, combinators |
 | **Result** | 18 | Railway-oriented, map/map_err, and_then chains |
-| **Total** | **108+** | |
+| **Total** | **120+** | |
 
 > For the full method reference with signatures and parameters, see [method_reference.md](./method_reference.md).
 > For the development roadmap, see [ROADMAP.md](../ROADMAP.md).
 
 ---
 
-*Built for Aura v0.4.0 — An AI-first programming language designed for vibe coding.*
+*Built for Aura v0.9.0 — An AI-first programming language designed for vibe coding.*

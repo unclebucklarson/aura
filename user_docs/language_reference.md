@@ -513,4 +513,4 @@ trait     true      type      while     with
 
 ---
 
-*Aura Language Reference — v0.1*
+*Aura Language Reference — v0.9.0*
