@@ -111,6 +111,7 @@ const (
         WHERE
         MATCHES
         THEN
+        WHEN
 )
 
 var tokenNames = map[Type]string{
@@ -211,6 +212,7 @@ var tokenNames = map[Type]string{
         WHERE:       "where",
         MATCHES:     "matches",
         THEN:        "then",
+        WHEN:        "when",
 }
 
 func (t Type) String() string {
@@ -274,6 +276,7 @@ var keywords = map[string]Type{
         "where":      WHERE,
         "matches":    MATCHES,
         "then":       THEN,
+        "when":       WHEN,
 }
 
 // LookupIdent returns the token type for the given identifier string.
@@ -320,5 +323,5 @@ func (t Token) String() string {
 
 // IsKeyword returns true if the token type is a keyword.
 func (t Type) IsKeyword() bool {
-        return t >= MODULE && t <= THEN
+        return t >= MODULE && t <= WHEN
 }

@@ -973,6 +973,15 @@ func (p *Parser) parseParam() *ast.Param {
         start := p.current().Pos
         param := &ast.Param{}
 
+        // Check for pattern parameter: fn f((x, y)) or fn f([a, b])
+        if p.check(token.LPAREN) || p.check(token.LBRACKET) {
+                pat := p.parseSinglePattern()
+                param.Pattern = pat
+                param.Name = "_pattern_" // synthetic name
+                param.Span = p.makeSpan(start)
+                return param
+        }
+
         tok := p.current()
         if tok.Type == token.IDENT || tok.Type.IsKeyword() {
                 param.Name = tok.Literal
@@ -1124,6 +1133,34 @@ func (p *Parser) parseLetStmt() ast.Statement {
                 return &ast.LetTupleDestructure{
                         Span:    p.makeSpan(start),
                         Names:   names,
+                        Mutable: mutable,
+                        Value:   value,
+                }
+        }
+
+        // Check for list pattern destructuring: let [first, ...rest] = list
+        if p.check(token.LBRACKET) {
+                pattern := p.parsePattern() // parsePattern handles [...]
+                p.expect(token.ASSIGN)
+                value := p.parseExpr()
+                p.expectNewline()
+                return &ast.LetPatternDestructure{
+                        Span:    p.makeSpan(start),
+                        Pattern: pattern,
+                        Mutable: mutable,
+                        Value:   value,
+                }
+        }
+
+        // Check for constructor pattern destructuring: let Some(x) = expr
+        if p.check(token.SOME) || p.check(token.OK) || p.check(token.ERR) {
+                pattern := p.parsePattern()
+                p.expect(token.ASSIGN)
+                value := p.parseExpr()
+                p.expectNewline()
+                return &ast.LetPatternDestructure{
+                        Span:    p.makeSpan(start),
+                        Pattern: pattern,
                         Mutable: mutable,
                         Value:   value,
                 }
@@ -1456,6 +1493,30 @@ func (p *Parser) parseExprOrAssignStmt() ast.Statement {
 // --- Patterns ---
 
 func (p *Parser) parsePattern() ast.Pattern {
+        return p.parseOrPattern()
+}
+
+// parseOrPattern parses "pattern1 | pattern2 | pattern3".
+func (p *Parser) parseOrPattern() ast.Pattern {
+        start := p.current().Pos
+        left := p.parseSinglePattern()
+
+        if p.check(token.PIPE) {
+                patterns := []ast.Pattern{left}
+                for p.check(token.PIPE) {
+                        p.advance()
+                        patterns = append(patterns, p.parseSinglePattern())
+                }
+                return &ast.OrPattern{
+                        Span:     p.makeSpan(start),
+                        Patterns: patterns,
+                }
+        }
+        return left
+}
+
+// parseSinglePattern parses a single (non-or) pattern.
+func (p *Parser) parseSinglePattern() ast.Pattern {
         start := p.current().Pos
 
         // Wildcard
@@ -1978,11 +2039,17 @@ func (p *Parser) parseMatchExpr() ast.Expr {
                 }
                 armStart := p.current().Pos
                 pattern := p.parsePattern()
+                var guard ast.Expr
+                if p.check(token.WHEN) {
+                        p.advance()
+                        guard = p.parseExpr()
+                }
                 p.expect(token.ARROW)
                 body := p.parseExpr()
                 arms = append(arms, &ast.MatchArm{
                         Span:    p.makeSpan(armStart),
                         Pattern: pattern,
+                        Guard:   guard,
                         Body:    body,
                 })
                 // Consume newline after arm if present

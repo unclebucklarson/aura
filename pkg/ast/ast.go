@@ -275,6 +275,7 @@ type Param struct {
         Name     string
         TypeExpr TypeExpr
         Default  Expr
+        Pattern  Pattern // optional: for destructuring patterns like fn f((x, y)) -> x + y
 }
 
 func (n *Param) nodeType() string    { return "Param" }
@@ -880,6 +881,19 @@ func (n *LetTupleDestructure) nodeType() string    { return "LetTupleDestructure
 func (n *LetTupleDestructure) GetSpan() token.Span { return n.Span }
 func (n *LetTupleDestructure) isStatement()        {}
 
+// LetPatternDestructure represents "let pattern = expr" with full pattern matching.
+// Examples: let [first, ...rest] = list, let Some(x) = maybe_val
+type LetPatternDestructure struct {
+        Span    token.Span
+        Pattern Pattern
+        Mutable bool
+        Value   Expr
+}
+
+func (n *LetPatternDestructure) nodeType() string    { return "LetPatternDestructure" }
+func (n *LetPatternDestructure) GetSpan() token.Span { return n.Span }
+func (n *LetPatternDestructure) isStatement()        {}
+
 // --- Patterns ---
 
 // Pattern is the interface for match patterns.
@@ -959,6 +973,16 @@ func (n *SpreadPattern) nodeType() string    { return "SpreadPattern" }
 func (n *SpreadPattern) GetSpan() token.Span { return n.Span }
 func (n *SpreadPattern) isPattern()          {}
 
+// OrPattern represents "pattern1 | pattern2 | pattern3" in match arms.
+type OrPattern struct {
+        Span     token.Span
+        Patterns []Pattern
+}
+
+func (n *OrPattern) nodeType() string    { return "OrPattern" }
+func (n *OrPattern) GetSpan() token.Span { return n.Span }
+func (n *OrPattern) isPattern()          {}
+
 // --- Match Expression ---
 
 // MatchExpr represents a match expression: match value: pattern -> expr, ...
@@ -973,9 +997,10 @@ func (n *MatchExpr) nodeType() string    { return "MatchExpr" }
 func (n *MatchExpr) GetSpan() token.Span { return n.Span }
 func (n *MatchExpr) isExpr()             {}
 
-// MatchArm represents a single arm in a match expression: pattern -> expr
+// MatchArm represents a single arm in a match expression: pattern [when guard] -> expr
 type MatchArm struct {
         Span    token.Span
         Pattern Pattern
+        Guard   Expr // optional guard: pattern when condition -> body
         Body    Expr
 }

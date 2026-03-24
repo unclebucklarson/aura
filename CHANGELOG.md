@@ -6,6 +6,56 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [v0.9.0-alpha.3] — 2026-03-23
+
+### Phase 3.2 Chunk 3: Advanced Pattern Matching Features
+
+Guard clauses, or-patterns, function parameter patterns, and let pattern destructuring.
+
+### Added
+- **Guard clauses**: `pattern when condition -> body`
+  - Optional guard expression evaluated after pattern matches
+  - Works in both `match` expressions and `match` statements
+  - Guard failure causes fallthrough to next arm
+  - Examples: `n when n > 0 -> "positive"`, `(a, b) when a == b -> "diagonal"`
+- **Or-patterns**: `pattern1 | pattern2 | pattern3`
+  - Match if any sub-pattern matches the value
+  - Works with literals, wildcards, and binding patterns
+  - Composable with guard clauses
+  - Examples: `1 | 2 | 3 -> "small"`, `"yes" | "ok" -> "affirmative"`
+- **Function parameter patterns**: `fn f((x, y)) -> x + y`
+  - Destructure arguments directly in function parameter position
+  - Supports tuple patterns: `fn add((x, y)) -> x + y`
+  - Supports list patterns: `fn first([x, ...rest]) -> x`
+  - Works in both named functions and lambdas
+  - Runtime error on pattern mismatch
+- **Let pattern destructuring**: `let pattern = expr`
+  - Extend let statements with full pattern matching
+  - List patterns: `let [first, ...rest] = list`, `let [a, b, c] = list`
+  - Constructor patterns: `let Some(x) = maybe_val`, `let Ok(v) = result`
+  - Spread patterns: `let [first, ...middle, last] = list`
+  - Runtime error on pattern mismatch
+- **24 new tests** for advanced pattern matching, bringing total to **987 passing tests**
+
+### Token Changes
+- New `WHEN` keyword token for guard clause syntax
+
+### AST Changes
+- New `OrPattern` node with `Patterns []Pattern` field
+- New `LetPatternDestructure` statement node
+- `MatchArm` extended with optional `Guard Expr` field
+- `Param` extended with optional `Pattern` field for function parameter patterns
+
+### Files Changed
+- `pkg/token/token.go` — added `WHEN` keyword
+- `pkg/ast/ast.go` — added `OrPattern`, `LetPatternDestructure`, extended `MatchArm` and `Param`
+- `pkg/parser/parser.go` — or-pattern parsing, guard clause parsing, let pattern parsing, function param patterns
+- `pkg/interpreter/eval.go` — guard evaluation, or-pattern matching, let pattern execution, param pattern destructuring
+- `pkg/interpreter/env.go` — added `OwnBindings()` helper
+- `pkg/interpreter/match_advanced_test.go` — NEW: 24 comprehensive tests
+
+---
+
 ## [v0.9.0-alpha.2] — 2026-03-23
 
 ### Phase 3.2 Chunk 2: Structured Data Patterns
