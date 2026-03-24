@@ -6,6 +6,52 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [v0.9.0] — 2026-03-23
+
+### Summary
+Production-ready pattern matching with exhaustiveness checking, unreachable pattern detection, and comprehensive warning system. **Phase 3.2 COMPLETE.**
+
+### Added
+- **Exhaustiveness checking** — Warns when match expressions don't cover all cases
+  - Boolean exhaustiveness: warns if `true` or `false` is missing
+  - Option exhaustiveness: warns if `Some(_)` or `None` is missing
+  - Result exhaustiveness: warns if `Ok(_)` or `Err(_)` is missing
+  - Literal exhaustiveness: warns if no wildcard/catch-all exists
+- **Unreachable pattern detection** — Warns when patterns can never match
+  - Wildcard/binding before specific patterns
+  - Multiple patterns after catch-all
+- **Redundant pattern detection** — Warns about duplicate patterns
+  - Duplicate literal patterns
+  - Duplicate constructor patterns (e.g., two `Some(_)`)
+- **Warning system** — Non-blocking pattern analysis warnings
+  - `WarningCollector` for accumulating warnings during execution
+  - Formatted warning output with line numbers and suggestions
+  - Three warning kinds: `WarnNonExhaustive`, `WarnUnreachable`, `WarnRedundant`
+- **Pattern analysis module** (`pkg/interpreter/pattern_analysis.go`)
+  - Static analysis of match patterns before execution
+  - Pattern categorization (catch-all, literal, constructor, complex)
+  - Pattern equivalence checking
+  - Guard-aware analysis (guarded catch-alls don't shadow)
+- **22 new tests** for exhaustiveness, unreachable patterns, and warnings (1010 total)
+- **Complete pattern matching documentation** in `user_docs/method_reference.md`
+
+### Changed
+- Version bumped to `v0.9.0` (production-ready)
+- `Interpreter` struct now includes `WarningCollector`
+- `evalMatchExpr` and `execMatchStmt` now run pattern analysis before execution
+- All interpreter constructors initialize warning collector
+
+### Files Changed
+- `pkg/interpreter/pattern_analysis.go` (NEW) — Pattern analyzer and warning system
+- `pkg/interpreter/match_exhaustiveness_test.go` (NEW) — 22 exhaustiveness/warning tests
+- `pkg/interpreter/interpreter.go` — Warning integration
+- `pkg/interpreter/eval.go` — Analysis hooks in match evaluation
+- `user_docs/method_reference.md` — Pattern matching guide
+- `CHANGELOG.md` — v0.9.0 release notes
+- `AI_NEXT_SESSION.md` — Phase 3.2 marked COMPLETE
+
+---
+
 ## [v0.9.0-alpha.3] — 2026-03-23
 
 ### Phase 3.2 Chunk 3: Advanced Pattern Matching Features

@@ -995,6 +995,9 @@ func execStmtBlock(stmts []ast.Statement, env *Environment) Value {
 }
 
 func execMatchStmt(s *ast.MatchStmt, env *Environment) Value {
+        // Run pattern analysis (warnings only, does not block execution)
+        emitWarnings(AnalyzeMatchStmt(s))
+
         subject := EvalExpr(s.Subject, env)
 
         for _, c := range s.Cases {
@@ -1021,6 +1024,9 @@ func execMatchStmt(s *ast.MatchStmt, env *Environment) Value {
 // Unlike execMatchStmt, this uses arrow syntax and each arm is an expression.
 // Panics with RuntimeError if no pattern matches.
 func evalMatchExpr(m *ast.MatchExpr, env *Environment) Value {
+        // Run pattern analysis (warnings only, does not block execution)
+        emitWarnings(AnalyzeMatchExpr(m))
+
         subject := EvalExpr(m.Subject, env)
 
         for _, arm := range m.Arms {

@@ -17,14 +17,16 @@ type Interpreter struct {
         resolver *module.Resolver
         filePath string // path of the source file being interpreted
         effects  *EffectContext // effect system capabilities
+        warnings *WarningCollector // pattern analysis warnings
 }
 
 // New creates a new interpreter for the given module.
 func New(mod *ast.Module) *Interpreter {
         interp := &Interpreter{
-                module:  mod,
-                env:     NewEnvironment(),
-                effects: NewEffectContext(),
+                module:   mod,
+                env:      NewEnvironment(),
+                effects:  NewEffectContext(),
+                warnings: NewWarningCollector(),
         }
         interp.registerBuiltins()
         return interp
@@ -38,6 +40,7 @@ func NewWithResolver(mod *ast.Module, filePath string, resolver *module.Resolver
                 resolver: resolver,
                 filePath: filePath,
                 effects:  NewEffectContext(),
+                warnings: NewWarningCollector(),
         }
         interp.registerBuiltins()
         return interp
@@ -47,9 +50,10 @@ func NewWithResolver(mod *ast.Module, filePath string, resolver *module.Resolver
 // This is useful for testing with mock effect providers.
 func NewWithEffects(mod *ast.Module, effects *EffectContext) *Interpreter {
         interp := &Interpreter{
-                module:  mod,
-                env:     NewEnvironment(),
-                effects: effects,
+                module:   mod,
+                env:      NewEnvironment(),
+                effects:  effects,
+                warnings: NewWarningCollector(),
         }
         interp.registerBuiltins()
         return interp
@@ -63,6 +67,7 @@ func NewWithResolverAndEffects(mod *ast.Module, filePath string, resolver *modul
                 resolver: resolver,
                 filePath: filePath,
                 effects:  effects,
+                warnings: NewWarningCollector(),
         }
         interp.registerBuiltins()
         return interp
@@ -71,6 +76,11 @@ func NewWithResolverAndEffects(mod *ast.Module, filePath string, resolver *modul
 // Effects returns the interpreter's effect context.
 func (interp *Interpreter) Effects() *EffectContext {
         return interp.effects
+}
+
+// Warnings returns the interpreter's warning collector.
+func (interp *Interpreter) Warnings() *WarningCollector {
+        return interp.warnings
 }
 
 // registerBuiltins adds built-in functions and constructors to the environment.
@@ -395,6 +405,10 @@ func (interp *Interpreter) Run() (result Value, err error) {
 
         result = &NoneVal{}
 
+        // Set active warnings collector for pattern analysis
+        SetActiveWarnings(interp.warnings)
+        defer SetActiveWarnings(nil)
+
         // Process imports first
         if err := interp.processImports(); err != nil {
                 return nil, err
@@ -448,6 +462,10 @@ func (interp *Interpreter) Run() (result Value, err error) {
 
 // RunFunction calls a named function with the given arguments.
 func (interp *Interpreter) RunFunction(name string, args []Value) (result Value, err error) {
+        // Set active warnings collector for pattern analysis during function execution
+        SetActiveWarnings(interp.warnings)
+        defer SetActiveWarnings(nil)
+
         defer func() {
                 if r := recover(); r != nil {
                         switch e := r.(type) {

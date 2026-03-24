@@ -1,10 +1,10 @@
 # Aura Method Reference
 
-> **Version:** 0.8.1 (Phase 3.1.1 — Tuple Literal Syntax COMPLETE)
+> **Version:** 0.9.0 (Phase 3.2 COMPLETE — Full Pattern Matching)
 > **Total Methods:** 120+ built-in methods + 117 stdlib functions  
 > **Types Covered:** String (22) · List (27) · Map (24) · Tuple (12) · Option (17) · Result (18)  
 > **Stdlib Modules:** math · string · io · testing · json · regex · collections · random · format · result · option · iter · file · time · env · net · log  
-> **Tests:** 905 total across all packages
+> **Tests:** 1010 total across all packages
 
 ---
 
@@ -1932,3 +1932,135 @@ testing.with_mock_effects(fn() {
     testing.assert_eq(logs.first().unwrap().level, "INFO")
 })
 ```
+
+
+---
+
+## Pattern Matching Guide
+
+Aura provides comprehensive pattern matching with exhaustiveness checking, unreachable pattern detection, and helpful warnings.
+
+### Basic Patterns
+
+```aura
+// Match expression (returns a value)
+let result = match value:
+    1 -> "one"
+    2 -> "two"
+    _ -> "other"
+
+// Match statement (executes body)
+match value:
+    case 1:
+        print("one")
+    case 2:
+        print("two")
+    case _:
+        print("other")
+```
+
+### Pattern Types
+
+| Pattern | Syntax | Description |
+|---------|--------|-------------|
+| Wildcard | `_` | Matches anything, discards value |
+| Binding | `x` | Matches anything, binds to variable |
+| Literal | `42`, `"hello"`, `true` | Matches specific value |
+| Constructor | `Some(x)`, `None`, `Ok(v)`, `Err(e)` | Matches Option/Result/Enum |
+| List | `[a, b, c]` | Matches list with exact length |
+| Spread | `[first, ...rest]` | Matches list with rest binding |
+| Tuple | `(a, b)` | Matches tuple with exact length |
+| Or | `1 \| 2 \| 3` | Matches any of the alternatives |
+
+### Guard Clauses
+
+```aura
+let result = match x:
+    n when n > 100 -> "big"
+    n when n > 0 -> "positive"
+    0 -> "zero"
+    _ -> "negative"
+```
+
+### Destructuring
+
+```aura
+// Option destructuring
+match maybe_value:
+    case Some(x):
+        print("Got: {x}")
+    case None:
+        print("Nothing")
+
+// Result destructuring
+match result:
+    case Ok(value):
+        print("Success: {value}")
+    case Err(error):
+        print("Error: {error}")
+
+// List destructuring with spread
+match items:
+    case []:
+        print("Empty")
+    case [only]:
+        print("Single: {only}")
+    case [first, ...rest]:
+        print("First: {first}, remaining: {rest.len()}")
+
+// Let pattern destructuring
+let (x, y) = get_point()
+let [first, ...rest] = get_list()
+let Some(value) = maybe_value  // panics if None
+```
+
+### Function Parameter Patterns
+
+```aura
+fn process_point((x, y)) -> Float:
+    return sqrt(x * x + y * y)
+
+fn handle_result(Ok(v)) -> String:
+    return "Got: {v}"
+```
+
+### Exhaustiveness Checking
+
+Aura analyzes match expressions and warns when patterns don't cover all cases:
+
+```
+Warning: [line 5] Non-exhaustive match
+  Missing patterns:
+    - false
+  Suggestion: Add the missing patterns or a catch-all pattern (_) to handle all cases
+```
+
+**Checked types:**
+- **Bool:** Warns if `true` or `false` is missing
+- **Option:** Warns if `Some(_)` or `None` is missing
+- **Result:** Warns if `Ok(_)` or `Err(_)` is missing
+- **Literals:** Warns if no wildcard/catch-all pattern exists
+
+### Unreachable Pattern Detection
+
+Aura detects patterns that can never match:
+
+```
+Warning: [line 12] Unreachable pattern
+  Pattern at line 12 is unreachable — shadowed by catch-all pattern at line 10
+  Suggestion: Remove this unreachable pattern or reorder patterns so specific ones come before catch-all
+```
+
+**Detected cases:**
+- Wildcard (`_`) before specific patterns
+- Variable binding before literals
+- Duplicate literal patterns
+- Duplicate constructor patterns
+
+### Best Practices
+
+1. **Always handle all cases** — Use exhaustive patterns or add a catch-all (`_`)
+2. **Put specific patterns first** — Wildcards and bindings should come last
+3. **Avoid duplicate patterns** — Each pattern should match unique values
+4. **Use guard clauses** — For conditions that can't be expressed in patterns alone
+5. **Prefer Option/Result** — Over null checks for safer code

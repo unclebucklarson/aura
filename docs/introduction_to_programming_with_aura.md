@@ -3,7 +3,7 @@
 > **Your first steps into the Aura programming language.**
 > This tutorial will take you from zero to writing real programs in Aura — no prior Aura experience required!
 
-**Aura version:** v0.9.0-alpha.1
+**Aura version:** v0.9.0
 **Difficulty:** Beginner
 **Time to complete:** ~45 minutes
 
