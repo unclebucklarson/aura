@@ -336,7 +336,13 @@ func (l *Lexer) scanToken() {
         case ',':
                 l.emitAt(token.COMMA, ",", pos)
         case '.':
-                l.emitAt(token.DOT, ".", pos)
+                if l.peek() == '.' && l.peekAt(1) == '.' {
+                        l.advance()
+                        l.advance()
+                        l.emitAt(token.DOTDOTDOT, "...", pos)
+                } else {
+                        l.emitAt(token.DOT, ".", pos)
+                }
         case '?':
                 if l.peek() == '.' {
                         l.advance()

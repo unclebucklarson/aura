@@ -949,14 +949,24 @@ func (n *TuplePattern) nodeType() string    { return "TuplePattern" }
 func (n *TuplePattern) GetSpan() token.Span { return n.Span }
 func (n *TuplePattern) isPattern()          {}
 
+// SpreadPattern represents "...rest" in list patterns.
+type SpreadPattern struct {
+        Span token.Span
+        Name string // the variable name to bind (e.g., "rest" in ...rest)
+}
+
+func (n *SpreadPattern) nodeType() string    { return "SpreadPattern" }
+func (n *SpreadPattern) GetSpan() token.Span { return n.Span }
+func (n *SpreadPattern) isPattern()          {}
+
 // --- Match Expression ---
 
 // MatchExpr represents a match expression: match value: pattern -> expr, ...
 // Unlike MatchStmt, this is an expression that returns a value.
 type MatchExpr struct {
-	Span    token.Span
-	Subject Expr
-	Arms    []*MatchArm
+        Span    token.Span
+        Subject Expr
+        Arms    []*MatchArm
 }
 
 func (n *MatchExpr) nodeType() string    { return "MatchExpr" }
@@ -965,7 +975,7 @@ func (n *MatchExpr) isExpr()             {}
 
 // MatchArm represents a single arm in a match expression: pattern -> expr
 type MatchArm struct {
-	Span    token.Span
-	Pattern Pattern
-	Body    Expr
+        Span    token.Span
+        Pattern Pattern
+        Body    Expr
 }

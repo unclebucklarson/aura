@@ -6,6 +6,54 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [v0.9.0-alpha.2] — 2026-03-23
+
+### Phase 3.2 Chunk 2: Structured Data Patterns
+
+Structured data pattern matching — tuple, list, constructor, spread, and nested patterns.
+
+### Added
+- **Tuple patterns**: `(0, 0) -> "origin"`, `(x, y) -> "point"`, `(_, 2) -> ...`
+  - Match by structure and element count
+  - Support literal values, variable bindings, and wildcards in elements
+  - Nested tuple matching: `((1, 2), 3) -> ...`
+- **List patterns**: `[] -> "empty"`, `[x] -> "single"`, `[x, y] -> "pair"`
+  - Exact-length matching with element patterns
+  - Support literal values, variable bindings, and wildcards
+- **Spread patterns**: `[first, ...rest] -> ...`, `[a, b, ...middle, last] -> ...`
+  - New `...` (ellipsis) token in lexer
+  - Binds remaining list elements to a variable as a new list
+  - Works with elements before and after the spread
+  - Empty rest produces an empty list
+- **Constructor patterns**: `Some(x) -> ...`, `None -> ...`, `Ok(v) -> ...`, `Err(e) -> ...`
+  - Match Option types: `Some(value)` and `None`
+  - Match Result types: `Ok(value)` and `Err(error)`
+  - Support literal matching inside constructors: `Some(42) -> "exact"`
+  - Support wildcard inside constructors: `Some(_) -> "has something"`
+- **Nested patterns**: Compose all pattern types freely
+  - Constructor + tuple: `Some((x, y)) -> "point"`
+  - Constructor + list + spread: `Some([first, ...rest]) -> ...`
+  - Tuple + constructor: `(Some(1), None) -> ...`
+  - List + tuple: `[(a, b)] -> "pair"`
+  - Deep nesting: `Ok(Some((x, y))) -> ...`
+- **33 new tests** for structured data patterns, bringing total to **963 passing tests**
+
+### Token Changes
+- New `DOTDOTDOT` token type (`...`) for spread patterns
+
+### AST Changes
+- New `SpreadPattern` node with `Name` field for variable binding
+
+### Files Changed
+- `pkg/token/token.go` — Added `DOTDOTDOT` token type and string mapping
+- `pkg/lexer/lexer.go` — Lexer recognizes `...` as `DOTDOTDOT` token
+- `pkg/ast/ast.go` — Added `SpreadPattern` type implementing `Pattern` interface
+- `pkg/parser/parser.go` — Parse `...ident` as spread pattern in list patterns
+- `pkg/interpreter/eval.go` — New `matchListPattern()` with spread support
+- `pkg/interpreter/match_structured_test.go` — **NEW**: 33 structured pattern tests
+
+---
+
 ## [v0.9.0-alpha.1] — 2026-03-23
 
 ### Phase 3.2 Chunk 1: Pattern Matching Core Infrastructure
