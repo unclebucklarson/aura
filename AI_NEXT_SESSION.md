@@ -1,9 +1,9 @@
 # AI Next Session - Aura Language
 
-## Status: Phase 3.2 Chunk 2 COMPLETE ✅ — Structured Data Patterns
+## Status: Phase 3.2 Chunk 3 COMPLETE ✅ — Advanced Pattern Matching Features
 
-**Version:** v0.9.0-alpha.2
-**Total Tests:** 963 (all passing)
+**Version:** v0.9.0-alpha.3
+**Total Tests:** 987 (all passing)
 **Date:** 2026-03-23
 
 ---
@@ -38,9 +38,9 @@
 | Standard library modules | 17 |
 | Standard library functions | 117 |
 | Effect providers | 5 (File, Time, Env, Net, Log) |
-| Total tests | 963 |
-| Interpreter tests | 830 |
-| Phases complete | 1, 2, 3, 3.1.1, 3.2-chunk1, 3.2-chunk2, 4 |
+| Total tests | 987 |
+| Interpreter tests | 854 |
+| Phases complete | 1, 2, 3, 3.1.1, 3.2-chunk1, 3.2-chunk2, 3.2-chunk3, 4 |
 
 ---
 
@@ -81,7 +81,7 @@ Standard Library Modules (17 total):
 | pkg/symbols | 9 | Symbol table, scopes |
 | pkg/types | 26 | Type system, subtyping |
 | pkg/interpreter | 830 | Full runtime + stdlib + effects + tuples + match expr + structured patterns |
-| **Total** | **963** | **All passing** |
+| **Total** | **987** | **All passing** |
 
 ---
 
@@ -171,12 +171,34 @@ Standard Library Modules (17 total):
 
 ---
 
-## 🚀 NEXT PRIORITY — Phase 3.2 Chunk 3: Guard Clauses, Or-patterns, Binding Patterns
+## ✅ COMPLETE — Phase 3.2 Chunk 3: Advanced Pattern Matching Features
+
+> Completed 2026-03-23. 987 tests passing on v0.9.0-alpha.3.
+
+### What Was Delivered (Chunk 3)
+- [x] Guard clauses: `pattern when condition -> body` (match expr + match stmt)
+- [x] Or-patterns: `pattern1 | pattern2 | pattern3`
+- [x] Function parameter patterns: `fn f((x, y)) -> x + y`, `fn f([a, ...rest]) -> a`
+- [x] Let pattern destructuring: `let [first, ...rest] = list`, `let Some(x) = val`
+- [x] `WHEN` keyword token, `OrPattern` AST node, `LetPatternDestructure` statement
+- [x] 24 new tests added (987 total)
+
+### Files Changed
+- `pkg/token/token.go` — added `WHEN` keyword
+- `pkg/ast/ast.go` — `OrPattern`, `LetPatternDestructure`, extended `MatchArm.Guard`, `Param.Pattern`
+- `pkg/parser/parser.go` — or-pattern, guard, let pattern, function param pattern parsing
+- `pkg/interpreter/eval.go` — guard evaluation, or-pattern matching, let pattern exec, param patterns
+- `pkg/interpreter/env.go` — `OwnBindings()` helper
+- `pkg/interpreter/match_advanced_test.go` — NEW: 24 tests
+
+---
+
+## 🚀 NEXT PRIORITY — Phase 3.2 Chunk 4 or Phase 5
 
 > **⚡ START HERE for the next session.**
 >
-> Chunk 2 complete. Main is clean with 963 tests passing on v0.9.0-alpha.2.
-> Chunk 3 adds guard clauses, or-patterns, and binding patterns.
+> Phase 3.2 Chunks 1-3 complete. Main is clean with 987 tests passing on v0.9.0-alpha.3.
+> Pattern matching system is now comprehensive. Consider Phase 5 (type checker) or remaining roadmap items.
 >
 > **Planning document:** `/home/ubuntu/phase_3_2_plan.md`
 

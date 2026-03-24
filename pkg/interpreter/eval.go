@@ -466,7 +466,21 @@ func callUserFn(span token.Span, fn *FunctionVal, args []Value) Value {
 
         // Bind parameters
         for i, param := range fn.Params {
-                if i < len(args) {
+                if param.Pattern != nil {
+                        // Pattern parameter: destructure the argument
+                        if i >= len(args) {
+                                runtimePanic(span, "missing argument for pattern parameter in function '%s'", fn.Name)
+                        }
+                        patEnv := NewEnclosedEnvironment(fnEnv)
+                        if !matchPattern(param.Pattern, args[i], patEnv) {
+                                runtimePanic(span, "argument does not match pattern parameter in function '%s'", fn.Name)
+                        }
+                        for name, val := range patEnv.OwnBindings() {
+                                if name != "_" {
+                                        fnEnv.Define(name, val)
+                                }
+                        }
+                } else if i < len(args) {
                         fnEnv.Define(param.Name, args[i])
                 } else if param.Default != nil {
                         fnEnv.Define(param.Name, EvalExpr(param.Default, fn.Env))
@@ -483,7 +497,20 @@ func callLambda(span token.Span, fn *LambdaVal, args []Value) Value {
         fnEnv := NewEnclosedEnvironment(fn.Env)
 
         for i, param := range fn.Params {
-                if i < len(args) {
+                if param.Pattern != nil {
+                        if i >= len(args) {
+                                runtimePanic(span, "missing argument for pattern parameter in lambda")
+                        }
+                        patEnv := NewEnclosedEnvironment(fnEnv)
+                        if !matchPattern(param.Pattern, args[i], patEnv) {
+                                runtimePanic(span, "argument does not match pattern parameter in lambda")
+                        }
+                        for name, val := range patEnv.OwnBindings() {
+                                if name != "_" {
+                                        fnEnv.Define(name, val)
+                                }
+                        }
+                } else if i < len(args) {
                         fnEnv.Define(param.Name, args[i])
                 } else if param.Default != nil {
                         fnEnv.Define(param.Name, EvalExpr(param.Default, fn.Env))
@@ -824,6 +851,8 @@ func ExecStmt(stmt ast.Statement, env *Environment) Value {
                 return execLetStmt(s, env)
         case *ast.LetTupleDestructure:
                 return execLetTupleDestructure(s, env)
+        case *ast.LetPatternDestructure:
+                return execLetPatternDestructure(s, env)
         case *ast.AssignStmt:
                 return execAssignStmt(s, env)
         case *ast.ReturnStmt:
@@ -858,6 +887,26 @@ func execLetStmt(s *ast.LetStmt, env *Environment) Value {
                 env.Define(s.Name, val)
         } else {
                 env.DefineConst(s.Name, val)
+        }
+        return &NoneVal{}
+}
+
+func execLetPatternDestructure(s *ast.LetPatternDestructure, env *Environment) Value {
+        val := EvalExpr(s.Value, env)
+        patEnv := NewEnclosedEnvironment(env)
+        if !matchPattern(s.Pattern, val, patEnv) {
+                runtimePanic(s.Span, "pattern destructure failed: value %s does not match pattern", val.String())
+        }
+        // Copy bindings from pattern match into the real environment
+        for name, v := range patEnv.OwnBindings() {
+                if name == "_" {
+                        continue
+                }
+                if s.Mutable {
+                        env.Define(name, v)
+                } else {
+                        env.DefineConst(name, v)
+                }
         }
         return &NoneVal{}
 }
@@ -977,6 +1026,13 @@ func evalMatchExpr(m *ast.MatchExpr, env *Environment) Value {
         for _, arm := range m.Arms {
                 armEnv := NewEnclosedEnvironment(env)
                 if matchPattern(arm.Pattern, subject, armEnv) {
+                        // Check guard clause
+                        if arm.Guard != nil {
+                                guardVal := EvalExpr(arm.Guard, armEnv)
+                                if !IsTruthy(guardVal) {
+                                        continue
+                                }
+                        }
                         return EvalExpr(arm.Body, armEnv)
                 }
         }
@@ -1012,6 +1068,19 @@ func matchPattern(pattern ast.Pattern, value Value, env *Environment) bool {
                                 }
                         }
                         return true
+                }
+                return false
+        case *ast.OrPattern:
+                for _, sub := range p.Patterns {
+                        // Each alternative gets its own env to avoid leaking bindings from failed matches
+                        subEnv := NewEnclosedEnvironment(env)
+                        if matchPattern(sub, value, subEnv) {
+                                // Copy bindings from the successful sub-pattern into the real env
+                                for name, val := range subEnv.OwnBindings() {
+                                        env.Define(name, val)
+                                }
+                                return true
+                        }
                 }
                 return false
         default:
